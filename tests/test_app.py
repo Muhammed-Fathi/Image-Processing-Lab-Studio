@@ -238,4 +238,4 @@ def test_dashboard_ui_is_clean_and_has_no_raw_markdown_cards():
     assert "**Task 1**" not in source
     assert 'class="lab-card"' in source
     assert "Quick navigation — select a module" in source
-    assert source.count('class="task-eyebrow"') == 1 or "task-eyebrow" in source
+    assert source.count('class="task-eyebrow"') == 9
