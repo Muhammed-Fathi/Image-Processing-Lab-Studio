@@ -27,35 +27,63 @@ matplotlib.use("Agg", force=False)
 
 st.set_page_config(
     page_title="Image Processing Lab Studio",
-    page_icon="🧪",
+    page_icon="I",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.markdown(
-    """
-    <style>
-      .lab-card { border: 1px solid #d7e0ea; border-radius: 12px;
-                  padding: 14px 16px; background: #ffffff; }
-      .discuss { background: #f0f6ff; border-left: 4px solid #2563eb;
-                 padding: 10px 14px; border-radius: 6px; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<style>
+:root { --ink:#193449; --muted:#6c7c8c; --accent:#176e82; --line:#dfe7ed; }
+.stApp { background:#f7f9fb; }
+.block-container { max-width:1290px; padding-top:2rem; padding-bottom:3rem; }
+header[data-testid="stHeader"] { background:transparent; }
+section[data-testid="stSidebar"] { background:#eef3f7; border-right:1px solid var(--line); }
+h1,h2,h3 { color:var(--ink); letter-spacing:-.025em; }
+.sidebar-brand { padding:8px 2px 20px; }
+.sidebar-brand small { display:block; color:var(--accent); font-size:11px; font-weight:800; letter-spacing:.15em; }
+.sidebar-brand h2 { font-size:27px; font-weight:760; margin:7px 0 4px; }
+.sidebar-brand p { color:var(--muted); font-size:13px; margin:0; }
+.sidebar-label { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.12em; margin:8px 0 14px; }
+.hero { border-radius:18px; padding:42px 45px; background:linear-gradient(120deg,#142e43,#1a5365); color:#fff; margin:6px 0 26px; }
+.hero .overline { color:#a6dbe0; font-size:11px; letter-spacing:.14em; font-weight:800; margin-bottom:12px; }
+.hero h1 { color:#fff; font-size:clamp(29px,3.5vw,45px); margin:0 0 13px; font-weight:760; line-height:1.12; }
+.hero p { color:#d6e3ea; font-size:15px; line-height:1.7; max-width:790px; margin:0; }
+.hero .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:23px; }
+.hero .chips span { font-size:11px; font-weight:700; color:#eaf4f6; padding:6px 12px; border:1px solid #628895; border-radius:30px; }
+.section-heading { margin:28px 0 14px; }
+.section-heading h2 { font-size:23px; margin:0 0 6px; }
+.section-heading p { font-size:14px; color:var(--muted); margin:0; }
+.lab-card { min-height:239px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:21px 23px; margin-bottom:15px; box-shadow:0 4px 14px rgba(26,56,74,.035); }
+.lab-card .meta { display:flex; justify-content:space-between; gap:9px; color:var(--accent); font-size:11px; font-weight:800; letter-spacing:.08em; margin-bottom:15px; }
+.lab-card .count { color:#81919e; font-weight:600; letter-spacing:0; }
+.lab-card h3 { font-size:19px; font-weight:750; margin:0 0 14px; }
+.lab-card .task-row { display:flex; gap:12px; border-top:1px solid #ecf0f4; padding:9px 0; font-size:14px; color:#284255; }
+.lab-card .task-no { color:var(--accent); font-size:12px; font-weight:800; min-width:20px; }
+.task-eyebrow { color:var(--accent); font-size:11px; letter-spacing:.12em; font-weight:800; margin:7px 0 6px; }
+.workflow { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:17px 0 28px; }
+.workflow div { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; }
+.workflow strong { display:block; font-size:11px; letter-spacing:.1em; color:var(--accent); margin-bottom:7px; }
+.workflow span { font-size:13px; color:#344e60; line-height:1.5; }
+.source-heading { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.12em; margin:12px 0 8px; }
+div[data-testid="stMetric"] { background:#fff; border:1px solid var(--line); border-radius:12px; padding:13px; }
+@media(max-width:820px) { .hero { padding:27px 22px; } .workflow { grid-template-columns:repeat(2,1fr); } .lab-card { min-height:auto; } }
+</style>
+""", unsafe_allow_html=True)
 
 NAV: list[tuple[str, str]] = [
-    ("dashboard", "🏠 Dashboard"),
-    ("t1", "Lab 1 · Task 1 — RGB Channel Separation"),
-    ("t2", "Lab 1 · Task 2 — Custom Grayscale"),
-    ("t3", "Lab 2 · Task 3 — Arithmetic Operations"),
-    ("t4", "Lab 2 · Task 4 — Negative / Solarization"),
-    ("t5", "Lab 2 · Task 5 — Channel Elimination"),
-    ("t6", "Lab 3 · Task 6 — Histogram Enhancement"),
-    ("t7", "Labs 4–5 · Task 7 — Noise Reduction + SNR"),
-    ("t8", "Labs 4–5 · Task 8 — Blur & Sharpening"),
-    ("t9", "Labs 4–5 · Task 9 — Edge Detection"),
+    ("dashboard", "Overview"),
+    ("t1", "01  RGB Channels"),
+    ("t2", "02  Weighted Grayscale"),
+    ("t3", "03  Arithmetic Operations"),
+    ("t4", "04  Negative / Solarization"),
+    ("t5", "05  Channel Elimination"),
+    ("t6", "06  Histogram Enhancement"),
+    ("t7", "07  Noise Reduction + SNR"),
+    ("t8", "08  Image Sharpening"),
+    ("t9", "09  Edge Detection"),
 ]
+
 NAV_BY_LABEL = {label: key for key, label in NAV}
 
 ACCEPTED_FORMATS = ["png", "jpg", "jpeg", "bmp", "tiff", "tif", "webp"]
@@ -78,6 +106,7 @@ def image_source(default_sample: str, color_preferred: bool = True):
     own. Returns (image, source_label) with the image as a uint8 array
     (BGR color or 2-D gray).
     """
+    st.markdown('<div class="source-heading">IMAGE SOURCE</div>', unsafe_allow_html=True)
     c1, c2 = st.columns([3, 2])
     samples = iu.list_samples()
     with c1:
@@ -95,7 +124,7 @@ def image_source(default_sample: str, color_preferred: bool = True):
             )
     with c2:
         up = st.file_uploader(
-            "Or upload your own image",
+            "Upload a custom image",
             type=ACCEPTED_FORMATS,
             label_visibility="collapsed",
         )
@@ -155,7 +184,7 @@ def download_button(img: np.ndarray, name: str, order: str = "bgr") -> None:
     """
     arr = img if order == "bgr" else cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     st.download_button(
-        "⬇️  Download PNG",
+        "Download PNG",
         iu.encode_png(arr),
         file_name=name,
         mime="image/png",
@@ -164,12 +193,12 @@ def download_button(img: np.ndarray, name: str, order: str = "bgr") -> None:
 
 
 def formula_box(text: str, title: str = "Formula / mathematical rule") -> None:
-    with st.expander(f"📐 {title}"):
+    with st.expander(title):
         st.code(text, language=None)
 
 
 def discussion(points: list[str], title: str = "Discussion notes (for oral evaluation)") -> None:
-    with st.expander(f"🎓 {title}", expanded=False):
+    with st.expander(title, expanded=False):
         for p in points:
             st.markdown(f"- {p}")
         st.caption("These notes summarize what to say if a teaching assistant asks for the reasoning behind the choices on this page.")
@@ -230,152 +259,119 @@ def luminance(img: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def render_sidebar() -> str:
-    # Apply a queued navigation (e.g. from the dashboard quick-jump)
-    # BEFORE the radio widget is constructed. Setting the session-state
-    # value of a widget key after the widget was instantiated is ignored
-    # by Streamlit, so the new label is queued in "pending_nav" and only
-    # now, before the radio exists, is it applied to "nav".
+    """Keep the navigation short; apply queued dashboard jumps before radio creation."""
     pending = st.session_state.pop("pending_nav", None)
     if pending in NAV_BY_LABEL:
         st.session_state["nav"] = pending
     with st.sidebar:
-        st.markdown("## 🧪 Image Processing Lab Studio")
-        st.caption("University image-processing course · 9 tasks · 4 labs")
-        st.divider()
         st.markdown(
-            """
-**Labs**
-- **Lab 1** — Image fundamentals (Tasks 1–2)
-- **Lab 2** — Pixel & intensity operations (Tasks 3–5)
-- **Lab 3** — Histogram enhancement (Task 6)
-- **Labs 4–5** — Filtering & edge detection (Tasks 7–9)
-            """
+            '<div class="sidebar-brand"><small>IMAGE PROCESSING</small>'
+            '<h2>Lab Studio</h2><p>Interactive practical workspace</p></div>'
+            '<div class="sidebar-label">NAVIGATION</div>',
+            unsafe_allow_html=True,
         )
         labels = [label for _, label in NAV]
         st.radio("Navigate", labels, index=0, key="nav", label_visibility="collapsed")
         st.divider()
-        st.caption(
-            "Demonstration images are bundled in `assets/samples/` — "
-            "the app never needs internet access. You can upload your own "
-            "image on every task page."
-        )
-    # In a real Streamlit run the radio widget always fills session state;
-    # the fallback keeps a bare `python app.py` import from crashing.
+        st.caption("4 lab groups / 9 practical modules")
+        st.caption("Select a sample image or upload your own inside any module.")
     nav = st.session_state.get("nav")
     if nav not in NAV_BY_LABEL:
         nav = NAV[0][1]
     return NAV_BY_LABEL[nav]
-
 
 # ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
 
 def page_dashboard() -> None:
-    st.title("🧪 Image Processing Lab Studio")
     st.markdown(
-        "An interactive, educational workbench that implements **nine university "
-        "image-processing tasks** in one Streamlit application. Pick a task, load a "
-        "bundled demonstration image (or upload your own), adjust parameters, compare "
-        "original and processed results, and read the mathematics and the reasoning "
-        "behind every choice — everything you need for a practical evaluation and an "
-        "oral discussion."
+        '<section class="hero"><div class="overline">COMPUTER VISION / UNIVERSITY LAB</div>'
+        '<h1>Image Processing Lab Studio</h1>'
+        '<p>Explore classical image-processing techniques in one focused workspace. '
+        'Choose a module, adjust parameters, compare results and understand the mathematics.</p>'
+        '<div class="chips"><span>04 LAB GROUPS</span><span>09 MODULES</span>'
+        '<span>PYTHON + OPENCV</span></div></section>',
+        unsafe_allow_html=True,
     )
-
-    st.markdown("### Lab overview")
+    st.markdown(
+        '<div class="section-heading"><h2>Explore the labs</h2>'
+        '<p>Nine practical exercises, grouped by topic.</p></div>',
+        unsafe_allow_html=True,
+    )
     cards = [
-        ("🎞️ Lab 1 — Image Fundamentals", [
-            "**Task 1** · RGB Channel Separation",
-            "**Task 2** · Custom Weighted Grayscale",
+        ("01", "Image Fundamentals", [
+            ("01", "RGB Channel Separation"),
+            ("02", "Custom Weighted Grayscale"),
         ]),
-        ("➗ Lab 2 — Pixel & Intensity Operations", [
-            "**Task 3** · Arithmetic Enhancement",
-            "**Task 4** · Negative / Solarization",
-            "**Task 5** · Color Channel Elimination",
+        ("02", "Pixel & Intensity Operations", [
+            ("03", "Arithmetic Enhancement"),
+            ("04", "Negative and Solarization"),
+            ("05", "Color Channel Elimination"),
         ]),
-        ("📊 Lab 3 — Histogram Enhancement", [
-            "**Task 6** · Histogram Stretching & Equalization",
+        ("03", "Histogram Enhancement", [
+            ("06", "Histogram Stretching and Equalization"),
         ]),
-        ("🔍 Labs 4 & 5 — Filtering & Edge Detection", [
-            "**Task 7** · Noise Reduction + SNR (from scratch)",
-            "**Task 8** · Blur & Sharpening",
-            "**Task 9** · Edge Detection (Sobel / Canny / Laplacian)",
+        ("04–05", "Filtering & Edge Detection", [
+            ("07", "Noise Reduction and SNR"),
+            ("08", "Blur and Sharpening"),
+            ("09", "Edge Detection"),
         ]),
     ]
-    cols = st.columns(2)
-    for i, (title, items) in enumerate(cards):
-        with cols[i % 2]:
-            st.markdown(f'<div class="lab-card"><b>{title}</b><br>{"<br>".join(items)}</div>',
-                        unsafe_allow_html=True)
+    for start in range(0, len(cards), 2):
+        cols = st.columns(2, gap="medium")
+        for col, (lab_no, title, tasks) in zip(cols, cards[start:start + 2]):
+            with col:
+                rows = "".join(
+                    f'<div class="task-row"><span class="task-no">{num}</span>'
+                    f'<span>{name}</span></div>' for num, name in tasks
+                )
+                st.markdown(
+                    f'<section class="lab-card"><div class="meta"><span>LAB {lab_no}</span>'
+                    f'<span class="count">{len(tasks)} MODULES</span></div>'
+                    f'<h3>{title}</h3>{rows}</section>',
+                    unsafe_allow_html=True,
+                )
 
-    st.markdown("### All nine tasks")
-    done = [
-        "Task 1 — RGB Channel Separation (BGR↔RGB, channels, isolated colors, pixel inspector, matrix excerpt)",
-        "Task 2 — Custom Grayscale via `Gray = 0.299R + 0.587G + 0.114B` (manual NumPy, float, clip)",
-        "Task 3 — Arithmetic operations `I+C`, `I−C`, `I×C`, `I÷C` with overflow-safe clipping",
-        "Task 4 — Negative `255−I` and threshold-controlled Solarization",
-        "Task 5 — Elimination of exactly one RGB channel with statistics evidence",
-        "Task 6 — Histogram Stretching (linear) and Equalization (Y-channel for color), live histograms",
-        "Task 7 — Salt & pepper / Gaussian noise + Median / Gaussian / Mean filters, manual SNR in dB",
-        "Task 8 — Gaussian blur then Laplacian / custom-kernel / unsharp-mask sharpening",
-        "Task 9 — Sobel, Canny and Laplacian edge detection with normalized visualization",
-    ]
-    for d in done:
-        st.markdown(f"✅ {d}")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("### Typical workflow")
-        st.markdown(
-            """1. **Choose a task** in the sidebar (or use quick navigation below).
-2. **Load an image** — bundled demonstration image or your own upload.
-3. **Tune the parameters** with sliders and selectors.
-4. **Compare** original vs. processed images.
-5. **Inspect the numbers** — statistics, histograms, SNR, matrix excerpts.
-6. **Read the formula** and the *why this technique* explanation.
-7. **Review the discussion notes** prepared for oral evaluation.
-8. **Download** the processed image as PNG."""
-        )
-    with c2:
-        st.markdown("### Technology stack")
-        st.markdown(
-            """- Python 3.10+
-- Streamlit (interactive UI)
-- OpenCV (`opencv-python-headless`)
-- NumPy (all pixel math in float, then clipped to uint8)
-- Matplotlib (histograms and plots)
-- Pillow (independent upload validation)
-- Pytest (automated tests)
-
-> Educational tool: deterministic classical image processing.
-> No deep learning, no external APIs, no internet access at runtime."""
-        )
-        st.markdown("### Run locally")
-        st.code(
-            "python -m venv .venv\npip install -r requirements.txt\nstreamlit run app.py",
-            language="bash",
-        )
-
-    st.divider()
-    jump = st.selectbox(
-        "⚡ Quick navigation — jump straight to a task",
-        ["— choose a task —"] + [label for _, label in NAV[1:]],
+    st.markdown(
+        '<div class="section-heading"><h2>Open a module</h2>'
+        '<p>Use the sidebar or jump directly to an exercise.</p></div>',
+        unsafe_allow_html=True,
     )
-    if jump != "— choose a task —":
-        # Queue the selected LABEL (a valid radio option) and rerun; the
-        # sidebar applies it to st.session_state["nav"] before the radio
-        # is constructed on the next run.
-        if st.session_state.get("pending_nav") != jump:
+    left, right = st.columns([1.5, 1], gap="large")
+    with left:
+        jump = st.selectbox(
+            "Quick navigation — select a module",
+            ["Select a module"] + [label for _, label in NAV[1:]],
+        )
+        if jump != "Select a module" and st.session_state.get("pending_nav") != jump:
             st.session_state["pending_nav"] = jump
             st.rerun()
+    with right:
+        st.info("Every module includes sample images, controls, a before/after comparison, and discussion notes.")
 
+    st.markdown(
+        '<div class="section-heading"><h2>How it works</h2>'
+        '<p>A simple workflow for every practical exercise.</p></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="workflow">'
+        '<div><strong>01 / SELECT</strong><span>Choose a module.</span></div>'
+        '<div><strong>02 / INPUT</strong><span>Load a sample or upload an image.</span></div>'
+        '<div><strong>03 / PROCESS</strong><span>Adjust settings and compare results.</span></div>'
+        '<div><strong>04 / REVIEW</strong><span>Inspect formulas and download.</span></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 # ---------------------------------------------------------------------------
 # Task 1 — RGB channel separation
 # ---------------------------------------------------------------------------
 
 def page_t1() -> None:
-    st.title("Task 1 · RGB Channel Separation")
+    st.markdown('<div class="task-eyebrow">LAB 01 / TASK 01</div>', unsafe_allow_html=True)
+    st.title("RGB Channel Separation")
     st.caption("Lab 1 — Image Fundamentals · Extract and inspect the Red, Green and Blue channels of a color image.")
 
     img, source = image_source("color_scene.png")
@@ -478,7 +474,8 @@ is made of; it is also the prerequisite for every channel-based operation in the
 # ---------------------------------------------------------------------------
 
 def page_t2() -> None:
-    st.title("Task 2 · Custom Grayscale Conversion")
+    st.markdown('<div class="task-eyebrow">LAB 01 / TASK 02</div>', unsafe_allow_html=True)
+    st.title("Custom Grayscale Conversion")
     st.caption("Lab 1 — Image Fundamentals · Grayscale via the weighted luminance formula, implemented manually (no average, no cv2 conversion).")
 
     img, source = image_source("color_scene.png")
@@ -598,7 +595,8 @@ def exposure_guidance(stats: dict) -> tuple[str, str]:
 
 
 def page_t3() -> None:
-    st.title("Task 3 · Arithmetic Image Enhancement")
+    st.markdown('<div class="task-eyebrow">LAB 02 / TASK 03</div>', unsafe_allow_html=True)
+    st.title("Arithmetic Image Enhancement")
     st.caption("Lab 2 — Pixel & Intensity Operations · Choose the arithmetic operation that fits the image's visual problem.")
 
     img, source = image_source("dark_scene.png")
@@ -694,7 +692,8 @@ def page_t3() -> None:
 # ---------------------------------------------------------------------------
 
 def page_t4() -> None:
-    st.title("Task 4 · Complement (Negative) & Solarization")
+    st.markdown('<div class="task-eyebrow">LAB 02 / TASK 04</div>', unsafe_allow_html=True)
+    st.title("Complement (Negative) & Solarization")
     st.caption("Lab 2 — Pixel & Intensity Operations · Full tonal inversion vs. threshold-controlled partial inversion.")
 
     img, source = image_source("midtone_gradient.png")
@@ -793,7 +792,8 @@ CHANNEL_EFFECT = {
 
 
 def page_t5() -> None:
-    st.title("Task 5 · Color Channel Elimination")
+    st.markdown('<div class="task-eyebrow">LAB 02 / TASK 05</div>', unsafe_allow_html=True)
+    st.title("Color Channel Elimination")
     st.caption("Lab 2 — Pixel & Intensity Operations · Examine the RGB matrix, then zero exactly one channel and observe the result.")
 
     img, source = image_source("color_cast.png")
@@ -833,7 +833,7 @@ def page_t5() -> None:
             f"channel for hidden information."
         )
 
-    with st.expander("🔢 Sample pixels from the RGB matrix (5×5 around center)"):
+    with st.expander("Sample pixels from the RGB matrix (5×5 around center)"):
         matrix_excerpt_table(rgb, size=5)
 
     ch_name = st.selectbox("Channel to eliminate (set to 0)", list(CHANNEL_NAMES.values()))
@@ -879,7 +879,8 @@ def page_t5() -> None:
 # ---------------------------------------------------------------------------
 
 def page_t6() -> None:
-    st.title("Task 6 · Histogram Enhancement")
+    st.markdown('<div class="task-eyebrow">LAB 03 / TASK 06</div>', unsafe_allow_html=True)
+    st.title("Histogram Enhancement")
     st.caption("Lab 3 — Histogram Enhancement · Start from a low-contrast image, measure its histogram, pick stretching or equalization.")
 
     img, source = image_source("low_contrast.png")
@@ -1008,7 +1009,8 @@ def format_snr(v: float) -> str:
 
 
 def page_t7() -> None:
-    st.title("Task 7 · Noise Reduction & SNR")
+    st.markdown('<div class="task-eyebrow">LAB 04–05 / TASK 07</div>', unsafe_allow_html=True)
+    st.title("Noise Reduction & SNR")
     st.caption("Labs 4–5 — Filtering · Inject artificial noise into a clean image, remove it with a suitable filter, measure SNR from scratch.")
 
     clean, source = image_source("detail_scene.png")
@@ -1136,7 +1138,8 @@ KERNEL_CUSTOM_STR = (
 
 
 def page_t8() -> None:
-    st.title("Task 8 · Detail Enhancement (Blur → Sharpening)")
+    st.markdown('<div class="task-eyebrow">LAB 04–05 / TASK 08</div>', unsafe_allow_html=True)
+    st.title("Detail Enhancement (Blur → Sharpening)")
     st.caption("Labs 4–5 — Filtering · Deliberately blur a clean image, then sharpen it and see what comes back.")
 
     clean, source = image_source("detail_scene.png")
@@ -1255,7 +1258,8 @@ LAPLACIAN_EDGE_STR = ("Laplacian edge operator (second derivative, isotropic):\n
 
 
 def page_t9() -> None:
-    st.title("Task 9 · Edge Detection")
+    st.markdown('<div class="task-eyebrow">LAB 04–05 / TASK 09</div>', unsafe_allow_html=True)
+    st.title("Edge Detection")
     st.caption("Labs 4–5 — Filtering · Choose an operator that reveals the structural boundaries of the image.")
 
     img, source = image_source("geometric_edges.png")
@@ -1348,7 +1352,6 @@ def main() -> None:
         "t9": page_t9,
     }
     nav_key = render_sidebar()
-    st.divider()
     pages[nav_key]()
 
 
