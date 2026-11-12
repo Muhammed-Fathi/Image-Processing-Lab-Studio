@@ -1175,14 +1175,20 @@ def page_t7() -> None:
         "relative to the reference signal.",
         "SNR calculation",
     )
-    st.markdown(f"**Why this filter:** {why_filter}")
-    st.markdown(
-        "**Interpretation:** the *before* SNR quantifies the damage the noise did; the *after* "
-        "SNR quantifies how much of the clean signal the filter recovered. A good denoiser "
-        "raises the SNR (reduces noise power). Note that any smoothing also removes real "
-        "high-frequency detail, so the denoised image is a trade-off: less noise, slightly "
-        "softer edges."
+    st.caption(
+        f"Selected filter: {filter_name}. Recommended for {noise_type.split(' (')[0]}: "
+        f"{recommended}. Compare the SNR values above to assess the result."
     )
+    with st.expander("Why this filter? Interpretation and limitations"):
+        st.markdown(f"**Why this filter:** {why_filter}")
+        st.markdown(
+            "**Interpretation:** the *before* SNR quantifies the damage the noise did; the *after* "
+            "SNR quantifies how much of the clean signal the filter recovered. A good denoiser "
+            "raises the SNR (reduces noise power). Note that any smoothing also removes real "
+            "high-frequency detail, so the denoised image is a trade-off: less noise, slightly "
+            "softer edges."
+        )
+
     discussion([
         f"Noise model: {noise_type}, generated with NumPy and seed {int(seed)} — the same seed always reproduces the same noisy image.",
         f"Filter: {filter_name} (kernel {iu.odd_kernel(ksize)}×{iu.odd_kernel(ksize)}). Recommended for this noise type: {recommended}.",
