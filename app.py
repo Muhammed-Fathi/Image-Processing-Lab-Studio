@@ -120,13 +120,13 @@ def image_source(default_sample: str, color_preferred: bool = True):
                 samples,
                 index=idx,
                 format_func=lambda s: f"{s}  ·  {iu.SAMPLE_INFO.get(s, '')}",
-                label_visibility="collapsed",
+                label_visibility="visible",
             )
     with c2:
         up = st.file_uploader(
             "Upload a custom image",
             type=ACCEPTED_FORMATS,
-            label_visibility="collapsed",
+            label_visibility="visible",
         )
 
     if up is not None:
