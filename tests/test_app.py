@@ -317,3 +317,37 @@ def test_task7_uses_clear_download_labels():
     assert 'label="Download Noisy Image"' in task7
     assert 'label="Download Denoised Image"' in task7
     assert "delta=improvement" in task7
+
+
+# ---------------------------------------------------------------------------
+# UI REGRESSION: consistent final layouts and distinct download labels
+# ---------------------------------------------------------------------------
+
+def test_all_task_pages_have_clear_download_labels():
+    """No task page should leave outputs ambiguous as 'Download PNG'."""
+    source = open(APP_PATH, encoding="utf-8").read()
+    for task in range(1, 10):
+        start = source.index(f"def page_t{task}() -> None:")
+        if task < 9:
+            end = source.index(f"# Task {task + 1}", start)
+        else:
+            end = source.index("# Main", start)
+        section = source[start:end]
+        assert "download_button(" in section, f"Task {task} missing download"
+        for line in section.splitlines():
+            if "download_button(" in line:
+                # Task 1 passes the label in a multiline call; skip its
+                # individual lines and check the relevant label expression.
+                if task == 1:
+                    continue
+                assert "label=" in line, f"Task {task} has an ambiguous download"
+    assert 'label=f"Download {channel_name}"' in source
+
+
+def test_task5_original_not_rendered_twice():
+    source = open(APP_PATH, encoding="utf-8").read()
+    task5 = source.split("def page_t5() -> None:", 1)[1].split(
+        "# Task 6", 1
+    )[0]
+    assert task5.count('show_image(rgb, "Original (RGB)", order="rgb")') == 1
+    assert 'with st.expander("How to interpret channel elimination")' in task5
