@@ -542,15 +542,15 @@ def page_t2() -> None:
     gray_cv = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)  # reference for comparison only
     max_diff = int(np.max(np.abs(gray_custom.astype(np.int16) - gray_cv.astype(np.int16))))
 
-    st.markdown("#### Original vs. custom weighted grayscale")
-    c1, c2, c3 = st.columns(3)
+    st.markdown("### Original and grayscale result")
+    c1, c2 = st.columns(2)
     with c1:
         show_image(rgb, "Original (RGB)", order="rgb")
     with c2:
-        st.image(gray_custom, channels="grayscale", caption="This task's output: 0.299R + 0.587G + 0.114B")
-    with c3:
-        st.image(gray_cv, channels="grayscale",
-                 caption="OpenCV's own grayscale — shown ONLY as a reference check, not used in the implementation")
+        st.image(gray_custom, channels="grayscale", caption="Weighted grayscale — 0.299R + 0.587G + 0.114B")
+    with st.expander("Reference: compare manual result with OpenCV grayscale"):
+        st.caption("OpenCV is used for verification only. The result above is calculated manually.")
+        st.image(gray_cv, channels="grayscale", caption="OpenCV grayscale reference")
 
     m1, m2 = st.columns(2)
     m1.metric("Max |custom − OpenCV|", f"{max_diff} / 255",
@@ -594,17 +594,18 @@ def page_t2() -> None:
         "Formula and rationale",
     )
 
-    st.markdown(
-        """
-**Why this technique?** The university rule is to convert to grayscale with a weighted
-formula, not a plain average or median. The luminance weights match human perception, so
-the gray image preserves the *perceived* brightness of the scene. The manual NumPy
-implementation (float → clip → uint8) is deliberately shown because it is exactly what
-the formula says, and the comparison column proves it matches OpenCV's own conversion up
-to rounding. **Limitation:** grayscale always discards hue — two different colors with the
-same luminance become identical gray values.
-        """
-    )
+    with st.expander("Why weighted grayscale instead of averaging?"):
+        st.markdown(
+            """
+    **Why this technique?** The university rule is to convert to grayscale with a weighted
+    formula, not a plain average or median. The luminance weights match human perception, so
+    the gray image preserves the *perceived* brightness of the scene. The manual NumPy
+    implementation (float → clip → uint8) is deliberately shown because it is exactly what
+    the formula says, and the comparison column proves it matches OpenCV's own conversion up
+    to rounding. **Limitation:** grayscale always discards hue — two different colors with the
+    same luminance become identical gray values.
+            """
+        )
     discussion([
         "Green weight (0.587) is the largest because the eye's photopic sensitivity peaks near 555 nm (green).",
         "Weighted vs. averaged: they differ whenever the channel values are uneven — see the live example above.",
@@ -613,7 +614,7 @@ same luminance become identical gray values.
     ])
 
     st.markdown("#### Download")
-    download_button(gray_custom, f"task2_{source_basename(source)}_weighted_gray.png")
+    download_button(gray_custom, f"task2_{source_basename(source)}_weighted_gray.png", label="Download Grayscale")
 
 
 # ---------------------------------------------------------------------------
@@ -686,15 +687,16 @@ def page_t3() -> None:
     with c2:
         show_image(out, f"Processed — {OP_INFO[op][0]} with C = {c_val}")
 
-    stats_table(
-        [
-            {"Image": "Original", **format_stats(stats_in)},
-            {"Image": f"Processed ({OP_INFO[op][0]})", **format_stats(stats_out)},
-        ],
-        "Intensity statistics (whole image)",
-    )
-    st.pyplot(histogram_figure({"Original": luminance(img), "Processed": luminance(out)},
-                               "Intensity histogram before / after"))
+    with st.expander("Inspect intensity statistics and histogram"):
+        stats_table(
+            [
+                {"Image": "Original", **format_stats(stats_in)},
+                {"Image": f"Processed ({OP_INFO[op][0]})", **format_stats(stats_out)},
+            ],
+            "Intensity statistics (whole image)",
+        )
+        st.pyplot(histogram_figure({"Original": luminance(img), "Processed": luminance(out)},
+                                   "Intensity histogram before / after"))
 
     if op == "add":
         effect = (f"Every pixel was lifted by {c_val}. Dark regions become visible first; "
@@ -726,14 +728,16 @@ def page_t3() -> None:
 
     formula_box(OP_INFO[op][1] + "\n\ncomputed in float32, then clipped to [0, 255] -> uint8, so unsigned overflow cannot occur")
 
-    st.markdown(f"**Selected operation and why:** {why} {effect}")
-    st.markdown(
-        "**Honest note:** no arithmetic operation is universally best. Addition is cheap and "
-        "predictable but clips; multiplication keeps relative contrast but overdrives "
-        "highlights; subtraction/division are the mirror images. The right choice follows the "
-        "image's measured exposure (see the banner above), and you should be able to justify "
-        "yours with the statistics shown here."
-    )
+    with st.expander("Why this operation? Detailed interpretation"):
+        st.markdown(f"**Selected operation and why:** {why} {effect}")
+        st.markdown(
+            "**Honest note:** no arithmetic operation is universally best. Addition is cheap and "
+            "predictable but clips; multiplication keeps relative contrast but overdrives "
+            "highlights; subtraction/division are the mirror images. The right choice follows the "
+            "image's measured exposure (see the banner above), and you should be able to justify "
+            "yours with the statistics shown here."
+        )
+
     discussion([
         f"The input's measured exposure is “{label}” (mean {stats_in['mean']:.1f}); the chosen operation {OP_INFO[op][0]} was selected to fight that problem.",
         "All four operations are affine/linear point operations — each pixel is processed independently.",
@@ -742,7 +746,7 @@ def page_t3() -> None:
     ])
 
     st.markdown("#### Download")
-    download_button(out, f"task3_{source_basename(source)}_{op}_{str(c_val).replace('.', '_')}.png")
+    download_button(out, f"task3_{source_basename(source)}_{op}_{str(c_val).replace('.', '_')}.png", label="Download Enhanced Image")
 
 
 # ---------------------------------------------------------------------------
@@ -815,16 +819,18 @@ def page_t4() -> None:
             f"rest of the picture, unlike the negative which changes everything."
         )
 
-    st.markdown(f"**Why this technique was selected:** {chosen}")
-    st.markdown(
-        "**Visual situations where each is useful.** *Negative*: viewing shadow detail, "
-        "X-ray aesthetics, checking whether an image is balanced (the negative often reveals "
-        "problems). *Solarization*: dramatic highlight effects, halftone-style art, or "
-        "selectively flattening overexposed regions.\n\n"
-        "**Limitation:** both are point operations — they reorder tonal values but never "
-        "recover lost detail. Solarization creates a visible band at the threshold (by "
-        "design); the negative inverts *all* information, so it is rarely the final output."
-    )
+    with st.expander("Technique comparison and limitations"):
+        st.markdown(f"**Why this technique was selected:** {chosen}")
+        st.markdown(
+            "**Visual situations where each is useful.** *Negative*: viewing shadow detail, "
+            "X-ray aesthetics, checking whether an image is balanced (the negative often reveals "
+            "problems). *Solarization*: dramatic highlight effects, halftone-style art, or "
+            "selectively flattening overexposed regions.\n\n"
+            "**Limitation:** both are point operations — they reorder tonal values but never "
+            "recover lost detail. Solarization creates a visible band at the threshold (by "
+            "design); the negative inverts *all* information, so it is rarely the final output."
+        )
+
     discussion([
         "Negative = full mirror of the intensity axis: out = 255 − I.",
         "Solarization = the negative applied only above threshold T; T is the control knob (T=0 collapses to the full negative).",
@@ -834,7 +840,7 @@ def page_t4() -> None:
 
     st.markdown("#### Download")
     tag = "negative" if mode.startswith("Negative") else f"solarize_T{threshold}"
-    download_button(out, f"task4_{source_basename(source)}_{tag}.png")
+    download_button(out, f"task4_{source_basename(source)}_{tag}.png", label="Download Processed Image")
 
 
 # ---------------------------------------------------------------------------
@@ -857,12 +863,9 @@ def page_t5() -> None:
     img, source = image_source("color_cast.png")
     rgb = ops.bgr_to_rgb(img)
 
-    st.markdown("#### Original image")
-    show_image(rgb, "Original (RGB)", order="rgb")
-
     ch_stats = metrics.channel_stats(rgb)
-    st.markdown("#### RGB channel statistics")
-    st.table(ch_stats)
+    with st.expander("Inspect RGB channel statistics", expanded=True):
+        st.table(ch_stats)
 
     means = {r["Channel"]: r["Mean"] for r in ch_stats}
     top_ch = max(means, key=means.get)
@@ -905,22 +908,24 @@ def page_t5() -> None:
     with c2:
         st.image(out, caption=f"Result with {ch_name} channel = 0")
 
-    st.markdown(f"**What changed:** {CHANNEL_EFFECT[ch_name]}")
-    st.markdown(f"**{guidance}**")
-    formula_box(
-        "For a pixel (R, G, B):\n"
-        f"eliminate Red    -> (0,   G, B)\n"
-        f"eliminate Green  -> (R,   0, B)\n"
-        f"eliminate Blue   -> (R,   G, 0)\n\n"
-        "Exactly one channel is zeroed; the other two are byte-for-byte unchanged.",
-        "Rule applied",
-    )
-    st.markdown(
-        "**Important honesty note:** eliminating a channel is a *diagnostic experiment*, not a "
-        "quality improvement. The result is deliberately unnatural — it shows *what that channel "
-        "was contributing*, not a corrected photo. Real color correction (white balance, "
-        "channel scaling) is a different technique."
-    )
+    with st.expander("How to interpret channel elimination"):
+        st.markdown(f"**What changed:** {CHANNEL_EFFECT[ch_name]}")
+        st.markdown(f"**{guidance}**")
+        formula_box(
+            "For a pixel (R, G, B):\n"
+            f"eliminate Red    -> (0,   G, B)\n"
+            f"eliminate Green  -> (R,   0, B)\n"
+            f"eliminate Blue   -> (R,   G, 0)\n\n"
+            "Exactly one channel is zeroed; the other two are byte-for-byte unchanged.",
+            "Rule applied",
+        )
+        st.markdown(
+            "**Important honesty note:** eliminating a channel is a *diagnostic experiment*, not a "
+            "quality improvement. The result is deliberately unnatural — it shows *what that channel "
+            "was contributing*, not a corrected photo. Real color correction (white balance, "
+            "channel scaling) is a different technique."
+        )
+
     discussion([
         "The decision is based on measured channel statistics shown above, not on a preset answer.",
         f"Selected channel: {ch_name}. Effect: the image is re-rendered from the remaining two primaries.",
@@ -929,7 +934,7 @@ def page_t5() -> None:
     ])
 
     st.markdown("#### Download")
-    download_button(out, f"task5_{source_basename(source)}_{ch_name.lower()}_removed.png", order="rgb")
+    download_button(out, f"task5_{source_basename(source)}_{ch_name.lower()}_removed.png", order="rgb", label="Download Channel-Eliminated Image")
 
 
 # ---------------------------------------------------------------------------
@@ -990,13 +995,14 @@ def page_t6() -> None:
         "Histogram before / after — computed from the actual pixel data",
     ))
 
-    stats_table(
-        [
-            {"Image": "Original", **format_stats(metrics.intensity_stats(gray_in))},
-            {"Image": f"Enhanced ({method})", **format_stats(metrics.intensity_stats(gray_out))},
-        ],
-        "Intensity statistics (luminance)",
-    )
+    with st.expander("Inspect detailed intensity statistics"):
+        stats_table(
+            [
+                {"Image": "Original", **format_stats(metrics.intensity_stats(gray_in))},
+                {"Image": f"Enhanced ({method})", **format_stats(metrics.intensity_stats(gray_out))},
+            ],
+            "Intensity statistics (luminance)",
+        )
 
     if method.startswith("A"):
         formula_box(
@@ -1036,16 +1042,18 @@ def page_t6() -> None:
             "extremes."
         )
 
-    st.markdown(
-        f"""
-**Contrast vs. brightness.** *Brightness* is the overall level of the intensities
-(the histogram's position); *contrast* is how spread out they are (the histogram's
-width). Stretching and equalization change **contrast**; the optional slider above
-changes **brightness** — the two effects are independent, which is why both are offered.
+    with st.expander("Why this enhancement method?"):
+        st.markdown(
+            f"""
+    **Contrast vs. brightness.** *Brightness* is the overall level of the intensities
+    (the histogram's position); *contrast* is how spread out they are (the histogram's
+    width). Stretching and equalization change **contrast**; the optional slider above
+    changes **brightness** — the two effects are independent, which is why both are offered.
+    
+    {why}
+    """
+        )
 
-{why}
-"""
-    )
     discussion([
         "Stretching: linear, depends only on the image's min/max — simple and predictable, but one outlier pixel can dominate the scale.",
         "Equalization: adaptive (uses the full CDF) — stronger on concentrated histograms, but amplifies noise and can exaggerate background.",
@@ -1055,7 +1063,7 @@ changes **brightness** — the two effects are independent, which is why both ar
 
     st.markdown("#### Download")
     tag = "stretch" if method.startswith("A") else "equalize"
-    download_button(out, f"task6_{source_basename(source)}_{tag}.png")
+    download_button(out, f"task6_{source_basename(source)}_{tag}.png", label="Download Enhanced Image")
 
 
 # ---------------------------------------------------------------------------
@@ -1283,16 +1291,18 @@ def page_t8() -> None:
 
     formula_box(kernel_block, "Kernel / expression used")
 
-    st.markdown(f"**Why this technique was chosen:** {explainer}")
-    st.markdown(
-        f"The image was first **blurred on purpose** (Gaussian, kernel {iu.odd_kernel(blur_k)}) so "
-        "that the sharpening has a visible job to do. **Scientific honesty:** Gaussian blur is a "
-        "low-pass filter — it permanently discards high-frequency information (information is "
-        "lost, not just hidden). Sharpening re-emphasizes the high frequencies that *survived* "
-        "the blur, so the result can look crisper, but it **cannot reconstruct** the detail the "
-        "blur destroyed, and it will also amplify any noise present. That is why real pipelines "
-        "sharpen carefully and never treat sharpening as an undo button."
-    )
+    with st.expander("Why this sharpening technique?"):
+        st.markdown(f"**Why this technique was chosen:** {explainer}")
+        st.markdown(
+            f"The image was first **blurred on purpose** (Gaussian, kernel {iu.odd_kernel(blur_k)}) so "
+            "that the sharpening has a visible job to do. **Scientific honesty:** Gaussian blur is a "
+            "low-pass filter — it permanently discards high-frequency information (information is "
+            "lost, not just hidden). Sharpening re-emphasizes the high frequencies that *survived* "
+            "the blur, so the result can look crisper, but it **cannot reconstruct** the detail the "
+            "blur destroyed, and it will also amplify any noise present. That is why real pipelines "
+            "sharpen carefully and never treat sharpening as an undo button."
+        )
+
     discussion([
         f"Blur first: Gaussian kernel {iu.odd_kernel(blur_k)}×{iu.odd_kernel(blur_k)} — a controlled, reproducible loss of high-frequency detail.",
         f"Sharpening method: {method}. Kernel/expression shown in the formula box; parameters were chosen interactively.",
@@ -1303,9 +1313,9 @@ def page_t8() -> None:
     st.markdown("#### Download")
     c1, c2 = st.columns(2)
     with c1:
-        download_button(blurred, f"task8_{source_basename(source)}_blurred.png")
+        download_button(blurred, f"task8_{source_basename(source)}_blurred.png", label="Download Blurred Image")
     with c2:
-        download_button(sharpened, f"task8_{source_basename(source)}_sharpened_{method.split()[0].lower()}.png")
+        download_button(sharpened, f"task8_{source_basename(source)}_sharpened_{method.split()[0].lower()}.png", label="Download Sharpened Image")
 
 
 # ---------------------------------------------------------------------------
@@ -1399,8 +1409,9 @@ def page_t9() -> None:
         st.image(edges, channels="grayscale", caption=f"Edge map — {method}")
 
     formula_box(formula_block, f"Operator — {method}")
-    st.markdown(f"**Why this operator was chosen:** {explainer}")
-    st.markdown(f"**When to prefer it:** {when} Structural note: on this image you can check that the operator traces exactly the square, the circle, the diagonal, the text and the small dot — that is what 'revealing structural boundaries' means, and different operators do it with different thickness and cleanliness.")
+    with st.expander("Why choose this edge operator?"):
+        st.markdown(f"**Why this operator was chosen:** {explainer}")
+        st.markdown(f"**When to prefer it:** {when} Structural note: on this image you can check that the operator traces exactly the square, the circle, the diagonal, the text and the small dot — that is what 'revealing structural boundaries' means, and different operators do it with different thickness and cleanliness.")
 
     discussion([
         f"Operator: {method} with the parameters shown. The edge map is generated live from the grayscale conversion of the displayed image.",
@@ -1410,7 +1421,7 @@ def page_t9() -> None:
     ])
 
     st.markdown("#### Download")
-    download_button(edges, f"task9_{source_basename(source)}_{method.lower()}_edges.png")
+    download_button(edges, f"task9_{source_basename(source)}_{method.lower()}_edges.png", label="Download Edge Map")
 
 
 # ---------------------------------------------------------------------------
