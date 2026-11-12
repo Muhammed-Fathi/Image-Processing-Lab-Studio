@@ -27,35 +27,63 @@ matplotlib.use("Agg", force=False)
 
 st.set_page_config(
     page_title="Image Processing Lab Studio",
-    page_icon="🧪",
+    page_icon="I",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.markdown(
-    """
-    <style>
-      .lab-card { border: 1px solid #d7e0ea; border-radius: 12px;
-                  padding: 14px 16px; background: #ffffff; }
-      .discuss { background: #f0f6ff; border-left: 4px solid #2563eb;
-                 padding: 10px 14px; border-radius: 6px; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<style>
+:root { --ink:#193449; --muted:#6c7c8c; --accent:#176e82; --line:#dfe7ed; }
+.stApp { background:#f7f9fb; }
+.block-container { max-width:1290px; padding-top:2rem; padding-bottom:3rem; }
+header[data-testid="stHeader"] { background:transparent; }
+section[data-testid="stSidebar"] { background:#eef3f7; border-right:1px solid var(--line); }
+h1,h2,h3 { color:var(--ink); letter-spacing:-.025em; }
+.sidebar-brand { padding:8px 2px 20px; }
+.sidebar-brand small { display:block; color:var(--accent); font-size:11px; font-weight:800; letter-spacing:.15em; }
+.sidebar-brand h2 { font-size:27px; font-weight:760; margin:7px 0 4px; }
+.sidebar-brand p { color:var(--muted); font-size:13px; margin:0; }
+.sidebar-label { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.12em; margin:8px 0 14px; }
+.hero { border-radius:18px; padding:42px 45px; background:linear-gradient(120deg,#142e43,#1a5365); color:#fff; margin:6px 0 26px; }
+.hero .overline { color:#a6dbe0; font-size:11px; letter-spacing:.14em; font-weight:800; margin-bottom:12px; }
+.hero h1 { color:#fff; font-size:clamp(29px,3.5vw,45px); margin:0 0 13px; font-weight:760; line-height:1.12; }
+.hero p { color:#d6e3ea; font-size:15px; line-height:1.7; max-width:790px; margin:0; }
+.hero .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:23px; }
+.hero .chips span { font-size:11px; font-weight:700; color:#eaf4f6; padding:6px 12px; border:1px solid #628895; border-radius:30px; }
+.section-heading { margin:28px 0 14px; }
+.section-heading h2 { font-size:23px; margin:0 0 6px; }
+.section-heading p { font-size:14px; color:var(--muted); margin:0; }
+.lab-card { min-height:239px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:21px 23px; margin-bottom:15px; box-shadow:0 4px 14px rgba(26,56,74,.035); }
+.lab-card .meta { display:flex; justify-content:space-between; gap:9px; color:var(--accent); font-size:11px; font-weight:800; letter-spacing:.08em; margin-bottom:15px; }
+.lab-card .count { color:#81919e; font-weight:600; letter-spacing:0; }
+.lab-card h3 { font-size:19px; font-weight:750; margin:0 0 14px; }
+.lab-card .task-row { display:flex; gap:12px; border-top:1px solid #ecf0f4; padding:9px 0; font-size:14px; color:#284255; }
+.lab-card .task-no { color:var(--accent); font-size:12px; font-weight:800; min-width:20px; }
+.task-eyebrow { color:var(--accent); font-size:11px; letter-spacing:.12em; font-weight:800; margin:7px 0 6px; }
+.workflow { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:17px 0 28px; }
+.workflow div { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; }
+.workflow strong { display:block; font-size:11px; letter-spacing:.1em; color:var(--accent); margin-bottom:7px; }
+.workflow span { font-size:13px; color:#344e60; line-height:1.5; }
+.source-heading { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.12em; margin:12px 0 8px; }
+div[data-testid="stMetric"] { background:#fff; border:1px solid var(--line); border-radius:12px; padding:13px; }
+@media(max-width:820px) { .hero { padding:27px 22px; } .workflow { grid-template-columns:repeat(2,1fr); } .lab-card { min-height:auto; } }
+</style>
+""", unsafe_allow_html=True)
 
 NAV: list[tuple[str, str]] = [
-    ("dashboard", "🏠 Dashboard"),
-    ("t1", "Lab 1 · Task 1 — RGB Channel Separation"),
-    ("t2", "Lab 1 · Task 2 — Custom Grayscale"),
-    ("t3", "Lab 2 · Task 3 — Arithmetic Operations"),
-    ("t4", "Lab 2 · Task 4 — Negative / Solarization"),
-    ("t5", "Lab 2 · Task 5 — Channel Elimination"),
-    ("t6", "Lab 3 · Task 6 — Histogram Enhancement"),
-    ("t7", "Labs 4–5 · Task 7 — Noise Reduction + SNR"),
-    ("t8", "Labs 4–5 · Task 8 — Blur & Sharpening"),
-    ("t9", "Labs 4–5 · Task 9 — Edge Detection"),
+    ("dashboard", "Overview"),
+    ("t1", "01  RGB Channels"),
+    ("t2", "02  Weighted Grayscale"),
+    ("t3", "03  Arithmetic Operations"),
+    ("t4", "04  Negative / Solarization"),
+    ("t5", "05  Channel Elimination"),
+    ("t6", "06  Histogram Enhancement"),
+    ("t7", "07  Noise Reduction + SNR"),
+    ("t8", "08  Image Sharpening"),
+    ("t9", "09  Edge Detection"),
 ]
+
 NAV_BY_LABEL = {label: key for key, label in NAV}
 
 ACCEPTED_FORMATS = ["png", "jpg", "jpeg", "bmp", "tiff", "tif", "webp"]
@@ -78,6 +106,7 @@ def image_source(default_sample: str, color_preferred: bool = True):
     own. Returns (image, source_label) with the image as a uint8 array
     (BGR color or 2-D gray).
     """
+    st.markdown('<div class="source-heading">IMAGE SOURCE</div>', unsafe_allow_html=True)
     c1, c2 = st.columns([3, 2])
     samples = iu.list_samples()
     with c1:
@@ -90,15 +119,20 @@ def image_source(default_sample: str, color_preferred: bool = True):
                 "Demonstration image",
                 samples,
                 index=idx,
-                format_func=lambda s: f"{s}  ·  {iu.SAMPLE_INFO.get(s, '')}",
-                label_visibility="collapsed",
+                format_func=lambda s: s,
+                label_visibility="visible",
             )
     with c2:
         up = st.file_uploader(
-            "Or upload your own image",
+            "Upload a custom image",
             type=ACCEPTED_FORMATS,
-            label_visibility="collapsed",
+            label_visibility="visible",
         )
+
+    if up is None and choice is not None:
+        description = iu.SAMPLE_INFO.get(choice)
+        if description:
+            st.caption(f"Sample details: {description}")
 
     if up is not None:
         data = up.getvalue()
@@ -146,7 +180,7 @@ def show_image(img: np.ndarray, caption: str | None = None, order: str = "bgr") 
         st.image(ops.bgr_to_rgb(img), caption=caption)
 
 
-def download_button(img: np.ndarray, name: str, order: str = "bgr") -> None:
+def download_button(img: np.ndarray, name: str, order: str = "bgr", label: str = "Download PNG") -> None:
     """Offer a PNG download.
 
     cv2.imencode assumes the array is in BGR order, so RGB arrays are
@@ -155,7 +189,7 @@ def download_button(img: np.ndarray, name: str, order: str = "bgr") -> None:
     """
     arr = img if order == "bgr" else cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     st.download_button(
-        "⬇️  Download PNG",
+        label,
         iu.encode_png(arr),
         file_name=name,
         mime="image/png",
@@ -164,12 +198,12 @@ def download_button(img: np.ndarray, name: str, order: str = "bgr") -> None:
 
 
 def formula_box(text: str, title: str = "Formula / mathematical rule") -> None:
-    with st.expander(f"📐 {title}"):
+    with st.expander(title):
         st.code(text, language=None)
 
 
 def discussion(points: list[str], title: str = "Discussion notes (for oral evaluation)") -> None:
-    with st.expander(f"🎓 {title}", expanded=False):
+    with st.expander(title, expanded=False):
         for p in points:
             st.markdown(f"- {p}")
         st.caption("These notes summarize what to say if a teaching assistant asks for the reasoning behind the choices on this page.")
@@ -205,18 +239,29 @@ def histogram_figure(gray_images: dict[str, np.ndarray], title: str = "Histogram
     return fig
 
 
-def matrix_excerpt_table(rgb: np.ndarray, size: int = 5) -> None:
-    """Show a small (size x size) RGB matrix excerpt around the image center."""
-    h, w = rgb.shape[:2]
-    y0 = max(0, h // 2 - size // 2)
-    x0 = max(0, w // 2 - size // 2)
-    rows = []
-    for y in range(y0, min(h, y0 + size)):
-        for x in range(x0, min(w, x0 + size)):
-            r, g, b = (int(v) for v in rgb[y, x])
-            rows.append({"Pixel (row, col)": f"({y}, {x})", "R": r, "G": g, "B": b})
-    st.table(rows)
+def matrix_excerpt_table(rgb: np.ndarray, size: int = 5,
+                         center: tuple[int, int] | None = None) -> None:
+    """Display an actual size-by-size matrix of RGB tuples, with one row per image row.
 
+    Center is a (row, column) pair. Unlike a 25-row pixel list, this reflects
+    the two-dimensional spatial structure of the sampled image region.
+    """
+    h, w = rgb.shape[:2]
+    if center is None:
+        center = (h // 2, w // 2)
+    cy, cx = center
+    y0 = min(max(0, cy - size // 2), max(0, h - size))
+    x0 = min(max(0, cx - size // 2), max(0, w - size))
+    xs = list(range(x0, min(w, x0 + size)))
+    ys = list(range(y0, min(h, y0 + size)))
+    rows = []
+    for y in ys:
+        row = {"Row / Col": str(y)}
+        for x in xs:
+            r, g, b = (int(value) for value in rgb[y, x])
+            row[str(x)] = f"({r}, {g}, {b})"
+        rows.append(row)
+    st.table(rows)
 
 def luminance(img: np.ndarray) -> np.ndarray:
     """Grayscale (or Y-channel) version used for histogram display."""
@@ -230,255 +275,265 @@ def luminance(img: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def render_sidebar() -> str:
-    # Apply a queued navigation (e.g. from the dashboard quick-jump)
-    # BEFORE the radio widget is constructed. Setting the session-state
-    # value of a widget key after the widget was instantiated is ignored
-    # by Streamlit, so the new label is queued in "pending_nav" and only
-    # now, before the radio exists, is it applied to "nav".
+    """Keep the navigation short; apply queued dashboard jumps before radio creation."""
     pending = st.session_state.pop("pending_nav", None)
     if pending in NAV_BY_LABEL:
         st.session_state["nav"] = pending
     with st.sidebar:
-        st.markdown("## 🧪 Image Processing Lab Studio")
-        st.caption("University image-processing course · 9 tasks · 4 labs")
-        st.divider()
         st.markdown(
-            """
-**Labs**
-- **Lab 1** — Image fundamentals (Tasks 1–2)
-- **Lab 2** — Pixel & intensity operations (Tasks 3–5)
-- **Lab 3** — Histogram enhancement (Task 6)
-- **Labs 4–5** — Filtering & edge detection (Tasks 7–9)
-            """
+            '<div class="sidebar-brand"><small>IMAGE PROCESSING</small>'
+            '<h2>Lab Studio</h2><p>Interactive practical workspace</p></div>'
+            '<div class="sidebar-label">NAVIGATION</div>',
+            unsafe_allow_html=True,
         )
         labels = [label for _, label in NAV]
         st.radio("Navigate", labels, index=0, key="nav", label_visibility="collapsed")
         st.divider()
-        st.caption(
-            "Demonstration images are bundled in `assets/samples/` — "
-            "the app never needs internet access. You can upload your own "
-            "image on every task page."
-        )
-    # In a real Streamlit run the radio widget always fills session state;
-    # the fallback keeps a bare `python app.py` import from crashing.
+        st.caption("4 lab groups / 9 practical modules")
+        st.caption("Select a sample image or upload your own inside any module.")
     nav = st.session_state.get("nav")
     if nav not in NAV_BY_LABEL:
         nav = NAV[0][1]
     return NAV_BY_LABEL[nav]
-
 
 # ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
 
 def page_dashboard() -> None:
-    st.title("🧪 Image Processing Lab Studio")
     st.markdown(
-        "An interactive, educational workbench that implements **nine university "
-        "image-processing tasks** in one Streamlit application. Pick a task, load a "
-        "bundled demonstration image (or upload your own), adjust parameters, compare "
-        "original and processed results, and read the mathematics and the reasoning "
-        "behind every choice — everything you need for a practical evaluation and an "
-        "oral discussion."
+        '<section class="hero"><div class="overline">COMPUTER VISION / UNIVERSITY LAB</div>'
+        '<h1>Image Processing Lab Studio</h1>'
+        '<p>Explore classical image-processing techniques in one focused workspace. '
+        'Choose a module, adjust parameters, compare results and understand the mathematics.</p>'
+        '<div class="chips"><span>04 LAB GROUPS</span><span>09 MODULES</span>'
+        '<span>PYTHON + OPENCV</span></div></section>',
+        unsafe_allow_html=True,
     )
-
-    st.markdown("### Lab overview")
+    st.markdown(
+        '<div class="section-heading"><h2>Explore the labs</h2>'
+        '<p>Nine practical exercises, grouped by topic.</p></div>',
+        unsafe_allow_html=True,
+    )
     cards = [
-        ("🎞️ Lab 1 — Image Fundamentals", [
-            "**Task 1** · RGB Channel Separation",
-            "**Task 2** · Custom Weighted Grayscale",
+        ("01", "Image Fundamentals", [
+            ("01", "RGB Channel Separation"),
+            ("02", "Custom Weighted Grayscale"),
         ]),
-        ("➗ Lab 2 — Pixel & Intensity Operations", [
-            "**Task 3** · Arithmetic Enhancement",
-            "**Task 4** · Negative / Solarization",
-            "**Task 5** · Color Channel Elimination",
+        ("02", "Pixel & Intensity Operations", [
+            ("03", "Arithmetic Enhancement"),
+            ("04", "Negative and Solarization"),
+            ("05", "Color Channel Elimination"),
         ]),
-        ("📊 Lab 3 — Histogram Enhancement", [
-            "**Task 6** · Histogram Stretching & Equalization",
+        ("03", "Histogram Enhancement", [
+            ("06", "Histogram Stretching and Equalization"),
         ]),
-        ("🔍 Labs 4 & 5 — Filtering & Edge Detection", [
-            "**Task 7** · Noise Reduction + SNR (from scratch)",
-            "**Task 8** · Blur & Sharpening",
-            "**Task 9** · Edge Detection (Sobel / Canny / Laplacian)",
+        ("04–05", "Filtering & Edge Detection", [
+            ("07", "Noise Reduction and SNR"),
+            ("08", "Blur and Sharpening"),
+            ("09", "Edge Detection"),
         ]),
     ]
-    cols = st.columns(2)
-    for i, (title, items) in enumerate(cards):
-        with cols[i % 2]:
-            st.markdown(f'<div class="lab-card"><b>{title}</b><br>{"<br>".join(items)}</div>',
-                        unsafe_allow_html=True)
+    for start in range(0, len(cards), 2):
+        cols = st.columns(2, gap="medium")
+        for col, (lab_no, title, tasks) in zip(cols, cards[start:start + 2]):
+            with col:
+                rows = "".join(
+                    f'<div class="task-row"><span class="task-no">{num}</span>'
+                    f'<span>{name}</span></div>' for num, name in tasks
+                )
+                st.markdown(
+                    f'<section class="lab-card"><div class="meta"><span>LAB {lab_no}</span>'
+                    f'<span class="count">{len(tasks)} MODULES</span></div>'
+                    f'<h3>{title}</h3>{rows}</section>',
+                    unsafe_allow_html=True,
+                )
 
-    st.markdown("### All nine tasks")
-    done = [
-        "Task 1 — RGB Channel Separation (BGR↔RGB, channels, isolated colors, pixel inspector, matrix excerpt)",
-        "Task 2 — Custom Grayscale via `Gray = 0.299R + 0.587G + 0.114B` (manual NumPy, float, clip)",
-        "Task 3 — Arithmetic operations `I+C`, `I−C`, `I×C`, `I÷C` with overflow-safe clipping",
-        "Task 4 — Negative `255−I` and threshold-controlled Solarization",
-        "Task 5 — Elimination of exactly one RGB channel with statistics evidence",
-        "Task 6 — Histogram Stretching (linear) and Equalization (Y-channel for color), live histograms",
-        "Task 7 — Salt & pepper / Gaussian noise + Median / Gaussian / Mean filters, manual SNR in dB",
-        "Task 8 — Gaussian blur then Laplacian / custom-kernel / unsharp-mask sharpening",
-        "Task 9 — Sobel, Canny and Laplacian edge detection with normalized visualization",
-    ]
-    for d in done:
-        st.markdown(f"✅ {d}")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("### Typical workflow")
-        st.markdown(
-            """1. **Choose a task** in the sidebar (or use quick navigation below).
-2. **Load an image** — bundled demonstration image or your own upload.
-3. **Tune the parameters** with sliders and selectors.
-4. **Compare** original vs. processed images.
-5. **Inspect the numbers** — statistics, histograms, SNR, matrix excerpts.
-6. **Read the formula** and the *why this technique* explanation.
-7. **Review the discussion notes** prepared for oral evaluation.
-8. **Download** the processed image as PNG."""
-        )
-    with c2:
-        st.markdown("### Technology stack")
-        st.markdown(
-            """- Python 3.10+
-- Streamlit (interactive UI)
-- OpenCV (`opencv-python-headless`)
-- NumPy (all pixel math in float, then clipped to uint8)
-- Matplotlib (histograms and plots)
-- Pillow (independent upload validation)
-- Pytest (automated tests)
-
-> Educational tool: deterministic classical image processing.
-> No deep learning, no external APIs, no internet access at runtime."""
-        )
-        st.markdown("### Run locally")
-        st.code(
-            "python -m venv .venv\npip install -r requirements.txt\nstreamlit run app.py",
-            language="bash",
-        )
-
-    st.divider()
-    jump = st.selectbox(
-        "⚡ Quick navigation — jump straight to a task",
-        ["— choose a task —"] + [label for _, label in NAV[1:]],
+    st.markdown(
+        '<div class="section-heading"><h2>Open a module</h2>'
+        '<p>Use the sidebar or jump directly to an exercise.</p></div>',
+        unsafe_allow_html=True,
     )
-    if jump != "— choose a task —":
-        # Queue the selected LABEL (a valid radio option) and rerun; the
-        # sidebar applies it to st.session_state["nav"] before the radio
-        # is constructed on the next run.
-        if st.session_state.get("pending_nav") != jump:
+    left, right = st.columns([1.5, 1], gap="large")
+    with left:
+        jump = st.selectbox(
+            "Quick navigation — select a module",
+            ["Select a module"] + [label for _, label in NAV[1:]],
+        )
+        if jump != "Select a module" and st.session_state.get("pending_nav") != jump:
             st.session_state["pending_nav"] = jump
             st.rerun()
+    with right:
+        st.info("Every module includes sample images, controls, a before/after comparison, and discussion notes.")
 
+    st.markdown(
+        '<div class="section-heading"><h2>How it works</h2>'
+        '<p>A simple workflow for every practical exercise.</p></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="workflow">'
+        '<div><strong>01 / SELECT</strong><span>Choose a module.</span></div>'
+        '<div><strong>02 / INPUT</strong><span>Load a sample or upload an image.</span></div>'
+        '<div><strong>03 / PROCESS</strong><span>Adjust settings and compare results.</span></div>'
+        '<div><strong>04 / REVIEW</strong><span>Inspect formulas and download.</span></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 # ---------------------------------------------------------------------------
 # Task 1 — RGB channel separation
 # ---------------------------------------------------------------------------
 
 def page_t1() -> None:
-    st.title("Task 1 · RGB Channel Separation")
-    st.caption("Lab 1 — Image Fundamentals · Extract and inspect the Red, Green and Blue channels of a color image.")
+    st.markdown('<div class="task-eyebrow">LAB 01 / TASK 01</div>', unsafe_allow_html=True)
+    st.title("RGB Channel Separation")
+    st.caption(
+        "Separate the red, green, and blue channels with OpenCV and "
+        "inspect their intensity, color contribution, and pixel values."
+    )
 
     img, source = image_source("color_scene.png")
     rgb = ops.bgr_to_rgb(img)
-    r, g, b = ops.separate_channels(rgb)
+    red, green, blue = ops.separate_channels(rgb)
+    h, w = rgb.shape[:2]
 
-    st.markdown("#### Channel order: BGR in OpenCV vs. RGB for display")
-    st.markdown(
-        "OpenCV loads color images in **BGR** order. If a BGR array is shown as if it were RGB, "
-        "the **red and blue channels appear swapped**. The left image below is the raw OpenCV "
-        "array mis-displayed; the right image is the correctly converted RGB version."
-    )
-    c1, c2 = st.columns(2)
-    with c1:
-        # Show the BGR array *as if* it were RGB: the classic red/blue swap demo.
-        st.image(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR),
-                 caption="Raw OpenCV BGR array displayed without conversion (red/blue look swapped)")
-    with c2:
-        st.image(rgb, caption="Correctly converted: `cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)`")
+    # A compact overview makes the output accessible without scrolling past
+    # two large copies of the same image.
+    st.markdown("### Original image")
+    left, right = st.columns([1.55, 1], gap="large")
+    with left:
+        show_image(rgb, "Original image — correct RGB color order", order="rgb")
+    with right:
+        st.markdown("**Method overview**")
+        st.markdown(
+            "OpenCV reads color images as **BGR**. Convert to **RGB** before "
+            "interpreting individual red, green and blue channels."
+        )
+        st.code(
+            "rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)\n"
+            "red, green, blue = cv2.split(rgb)",
+            language="python",
+        )
+        st.metric("Resolution", f"{w} × {h}")
+        st.caption("Each channel has 8-bit intensity values from 0 to 255.")
 
-    st.markdown("#### 1 · Original image (RGB)")
-    show_image(rgb, "Original (correct color order)", order="rgb")
+    # BGR/RGB is useful for an oral exam, but shouldn't dominate the page.
+    with st.expander("Why does BGR versus RGB matter? See the comparison"):
+        st.markdown(
+            "OpenCV's **BGR** channel order differs from the **RGB** order "
+            "used for display. Treating BGR as RGB swaps the red and blue appearance."
+        )
+        before, after = st.columns(2)
+        with before:
+            st.image(
+                img,
+                caption="Incorrect: raw BGR interpreted as RGB (red and blue swapped)",
+            )
+        with after:
+            st.image(
+                rgb,
+                caption="Correct: BGR converted to RGB before display",
+            )
 
+    st.markdown("### Explore the channels")
     tab_map, tab_iso, tab_px, tab_mx = st.tabs(
-        ["2 · Channel intensity maps", "3 · Color-isolated images", "4 · Pixel inspector", "5 · RGB matrix excerpt"]
+        ["Intensity maps", "Color isolation", "Pixel inspector", "RGB matrix (5×5)"]
     )
     with tab_map:
-        st.markdown("Each channel shown as a grayscale **intensity map**: bright = that primary is strong there.")
-        ch = st.columns(3)
-        for col, arr, name in zip(ch, (r, g, b), ("Red", "Green", "Blue")):
+        st.caption(
+            "Brightness in each grayscale map represents the intensity "
+            "of that channel at every pixel."
+        )
+        cols = st.columns(3)
+        for col, values, name in zip(
+            cols, (red, green, blue), ("Red", "Green", "Blue")
+        ):
             with col:
-                st.image(arr, channels="grayscale", caption=f"{name} channel — intensity only")
+                st.image(values, channels="grayscale", caption=f"{name} intensity")
+
     with tab_iso:
-        st.markdown("Color-isolated images: only the corresponding channel is preserved, the other two are set to 0.")
-        ch = st.columns(3)
-        for col, i, name in zip(ch, (0, 1, 2), ("Only Red", "Only Green", "Only Blue")):
+        st.caption(
+            "Each image preserves one color channel and sets the other two to zero."
+        )
+        cols = st.columns(3)
+        base = source_basename(source)
+        for col, index, channel_name, image_channel in zip(
+            cols,
+            (0, 1, 2),
+            ("Red", "Green", "Blue"),
+            ("red", "green", "blue"),
+        ):
             with col:
-                iso = ops.isolate_channel(rgb, i)
-                st.image(iso, caption=name)
+                isolated = ops.isolate_channel(rgb, index)
+                st.image(isolated, caption=f"{channel_name} channel only")
+                download_button(
+                    isolated,
+                    f"task1_{base}_{image_channel}_only.png",
+                    order="rgb",
+                    label=f"Download {channel_name}",
+                )
+
     with tab_px:
-        st.markdown("Inspect the exact stored values of any pixel.")
-        h, w = rgb.shape[:2]
-        c1, c2, c3 = st.columns([1, 1, 2])
-        with c1:
-            px = st.slider("Column x", 0, max(0, w - 1), min(50, max(0, w - 1)))
-        with c2:
-            py = st.slider("Row y", 0, max(0, h - 1), min(50, max(0, h - 1)))
-        r_v, g_v, b_v = (int(v) for v in rgb[py, px])
-        with c3:
-            m1, m2, m3 = st.columns(3)
-            m1.metric("R", r_v)
-            m2.metric("G", g_v)
-            m3.metric("B", b_v)
+        st.caption("Choose pixel coordinates to inspect the original RGB values.")
+        controls, preview = st.columns([1, 1.35], gap="large")
+        with controls:
+            px = st.slider("Column x", 0, max(0, w - 1), min(50, w - 1))
+            py = st.slider("Row y", 0, max(0, h - 1), min(50, h - 1))
+            r_v, g_v, b_v = (int(v) for v in rgb[py, px])
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Red", r_v)
+            c2.metric("Green", g_v)
+            c3.metric("Blue", b_v)
+            st.caption(f"Selected pixel: row {py}, column {px}")
+        with preview:
             marked = rgb.copy()
             cv2.circle(marked, (px, py), 4, (255, 0, 0), 2)
-            st.image(marked, caption=f"Selected pixel at (row {py}, col {px})")
+            st.image(marked, caption="Pixel location in the original image")
+
     with tab_mx:
-        st.markdown("The image *is* a matrix of (R, G, B) triplets. A 5×5 excerpt around the center:")
-        matrix_excerpt_table(rgb, size=5)
+        st.caption(
+            "This is a 5×5 spatial matrix of (R, G, B) pixel triplets. "
+            "Move the coordinates toward an object boundary to see how values change."
+        )
+        cy_col, cx_col = st.columns(2)
+        with cy_col:
+            matrix_y = st.slider("Matrix center — row", 0, max(0, h - 1), h // 2)
+        with cx_col:
+            matrix_x = st.slider("Matrix center — column", 0, max(0, w - 1), w // 2)
+        matrix_excerpt_table(rgb, size=5, center=(matrix_y, matrix_x))
 
-    formula_box(
-        "Pixel = (R, G, B) with R, G, B in [0, 255]\n"
-        "OpenCV stores (B, G, R)  ->  rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)\n"
-        "r, g, b = cv2.split(rgb)            # three single-channel arrays\n"
-        "isolate(i) = merge(ch0 if i==0 else 0, ch1 if i==1 else 0, ch2 if i==2 else 0)",
-        "Formula / operations used",
-    )
+    with st.expander("Understanding the result and mathematical operations"):
+        st.markdown(
+            "**RGB representation:** each pixel contains three channel values "
+            "between 0 and 255. Grayscale channel intensity maps show the strength "
+            "of each primary color. Color-isolated images instead keep the actual "
+            "primary in the rendered output."
+        )
+        st.code(
+            "Pixel = (R, G, B), each component in [0, 255]\n"
+            "rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)\n"
+            "R, G, B = cv2.split(rgb)\n"
+            "isolate(red) = (R, 0, 0)\n"
+            "isolate(green) = (0, G, 0)\n"
+            "isolate(blue) = (0, 0, B)",
+            language="python",
+        )
 
-    st.markdown(
-        f"""
-**What is the RGB representation?** Every color pixel is stored as three intensity
-values — Red, Green and Blue — each 0 (off) to 255 (full). The perceived color is the
-mix of the three; for example `{r_v}, {g_v}, {b_v}` at the selected pixel. Separating the
-channels shows each primary's *contribution* to the scene: the red channel is bright where
-the image contains red, and dark where it does not, and so on for green and blue.
-**Why this technique?** Channel separation is the most basic way to inspect what an image
-is made of; it is also the prerequisite for every channel-based operation in the other tasks.
-"""
-    )
     discussion([
-        "OpenCV uses BGR; always convert before display or analysis that assumes RGB order.",
-        "A channel intensity map is grayscale: bright = that primary is strong in that region.",
-        "Color isolation (keeping one channel, zeroing the others) shows what the scene looks like under that single primary color.",
-        "Limitation: the channel split is exact and lossless — no information is created or destroyed; it only re-presents the same data.",
+        "OpenCV typically reads color images in BGR; convert to RGB before interpreting channels.",
+        "An intensity map uses grayscale brightness to reveal the contribution of one color channel.",
+        "A color-isolated image retains exactly one channel while setting the others to zero.",
+        "The RGB split is reversible when all three channels are kept; no color information is lost by splitting alone.",
     ])
-
-    st.markdown("#### Download")
-    base = source_basename(source)
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        download_button(ops.isolate_channel(rgb, 0), f"task1_{base}_red_only.png", order="rgb")
-    with c2:
-        download_button(ops.isolate_channel(rgb, 1), f"task1_{base}_green_only.png", order="rgb")
-    with c3:
-        download_button(ops.isolate_channel(rgb, 2), f"task1_{base}_blue_only.png", order="rgb")
-
 
 # ---------------------------------------------------------------------------
 # Task 2 — custom weighted grayscale
 # ---------------------------------------------------------------------------
 
 def page_t2() -> None:
-    st.title("Task 2 · Custom Grayscale Conversion")
+    st.markdown('<div class="task-eyebrow">LAB 01 / TASK 02</div>', unsafe_allow_html=True)
+    st.title("Custom Grayscale Conversion")
     st.caption("Lab 1 — Image Fundamentals · Grayscale via the weighted luminance formula, implemented manually (no average, no cv2 conversion).")
 
     img, source = image_source("color_scene.png")
@@ -487,15 +542,15 @@ def page_t2() -> None:
     gray_cv = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)  # reference for comparison only
     max_diff = int(np.max(np.abs(gray_custom.astype(np.int16) - gray_cv.astype(np.int16))))
 
-    st.markdown("#### Original vs. custom weighted grayscale")
-    c1, c2, c3 = st.columns(3)
+    st.markdown("### Original and grayscale result")
+    c1, c2 = st.columns(2)
     with c1:
         show_image(rgb, "Original (RGB)", order="rgb")
     with c2:
-        st.image(gray_custom, channels="grayscale", caption="This task's output: 0.299R + 0.587G + 0.114B")
-    with c3:
-        st.image(gray_cv, channels="grayscale",
-                 caption="OpenCV's own grayscale — shown ONLY as a reference check, not used in the implementation")
+        st.image(gray_custom, channels="grayscale", caption="Weighted grayscale — 0.299R + 0.587G + 0.114B")
+    with st.expander("Reference: compare manual result with OpenCV grayscale"):
+        st.caption("OpenCV is used for verification only. The result above is calculated manually.")
+        st.image(gray_cv, channels="grayscale", caption="OpenCV grayscale reference")
 
     m1, m2 = st.columns(2)
     m1.metric("Max |custom − OpenCV|", f"{max_diff} / 255",
@@ -539,17 +594,18 @@ def page_t2() -> None:
         "Formula and rationale",
     )
 
-    st.markdown(
-        """
-**Why this technique?** The university rule is to convert to grayscale with a weighted
-formula, not a plain average or median. The luminance weights match human perception, so
-the gray image preserves the *perceived* brightness of the scene. The manual NumPy
-implementation (float → clip → uint8) is deliberately shown because it is exactly what
-the formula says, and the comparison column proves it matches OpenCV's own conversion up
-to rounding. **Limitation:** grayscale always discards hue — two different colors with the
-same luminance become identical gray values.
-        """
-    )
+    with st.expander("Why weighted grayscale instead of averaging?"):
+        st.markdown(
+            """
+    **Why this technique?** The university rule is to convert to grayscale with a weighted
+    formula, not a plain average or median. The luminance weights match human perception, so
+    the gray image preserves the *perceived* brightness of the scene. The manual NumPy
+    implementation (float → clip → uint8) is deliberately shown because it is exactly what
+    the formula says, and the comparison column proves it matches OpenCV's own conversion up
+    to rounding. **Limitation:** grayscale always discards hue — two different colors with the
+    same luminance become identical gray values.
+            """
+        )
     discussion([
         "Green weight (0.587) is the largest because the eye's photopic sensitivity peaks near 555 nm (green).",
         "Weighted vs. averaged: they differ whenever the channel values are uneven — see the live example above.",
@@ -558,7 +614,7 @@ same luminance become identical gray values.
     ])
 
     st.markdown("#### Download")
-    download_button(gray_custom, f"task2_{source_basename(source)}_weighted_gray.png")
+    download_button(gray_custom, f"task2_{source_basename(source)}_weighted_gray.png", label="Download Grayscale")
 
 
 # ---------------------------------------------------------------------------
@@ -598,7 +654,8 @@ def exposure_guidance(stats: dict) -> tuple[str, str]:
 
 
 def page_t3() -> None:
-    st.title("Task 3 · Arithmetic Image Enhancement")
+    st.markdown('<div class="task-eyebrow">LAB 02 / TASK 03</div>', unsafe_allow_html=True)
+    st.title("Arithmetic Image Enhancement")
     st.caption("Lab 2 — Pixel & Intensity Operations · Choose the arithmetic operation that fits the image's visual problem.")
 
     img, source = image_source("dark_scene.png")
@@ -630,15 +687,16 @@ def page_t3() -> None:
     with c2:
         show_image(out, f"Processed — {OP_INFO[op][0]} with C = {c_val}")
 
-    stats_table(
-        [
-            {"Image": "Original", **format_stats(stats_in)},
-            {"Image": f"Processed ({OP_INFO[op][0]})", **format_stats(stats_out)},
-        ],
-        "Intensity statistics (whole image)",
-    )
-    st.pyplot(histogram_figure({"Original": luminance(img), "Processed": luminance(out)},
-                               "Intensity histogram before / after"))
+    with st.expander("Inspect intensity statistics and histogram"):
+        stats_table(
+            [
+                {"Image": "Original", **format_stats(stats_in)},
+                {"Image": f"Processed ({OP_INFO[op][0]})", **format_stats(stats_out)},
+            ],
+            "Intensity statistics (whole image)",
+        )
+        st.pyplot(histogram_figure({"Original": luminance(img), "Processed": luminance(out)},
+                                   "Intensity histogram before / after"))
 
     if op == "add":
         effect = (f"Every pixel was lifted by {c_val}. Dark regions become visible first; "
@@ -670,14 +728,16 @@ def page_t3() -> None:
 
     formula_box(OP_INFO[op][1] + "\n\ncomputed in float32, then clipped to [0, 255] -> uint8, so unsigned overflow cannot occur")
 
-    st.markdown(f"**Selected operation and why:** {why} {effect}")
-    st.markdown(
-        "**Honest note:** no arithmetic operation is universally best. Addition is cheap and "
-        "predictable but clips; multiplication keeps relative contrast but overdrives "
-        "highlights; subtraction/division are the mirror images. The right choice follows the "
-        "image's measured exposure (see the banner above), and you should be able to justify "
-        "yours with the statistics shown here."
-    )
+    with st.expander("Why this operation? Detailed interpretation"):
+        st.markdown(f"**Selected operation and why:** {why} {effect}")
+        st.markdown(
+            "**Honest note:** no arithmetic operation is universally best. Addition is cheap and "
+            "predictable but clips; multiplication keeps relative contrast but overdrives "
+            "highlights; subtraction/division are the mirror images. The right choice follows the "
+            "image's measured exposure (see the banner above), and you should be able to justify "
+            "yours with the statistics shown here."
+        )
+
     discussion([
         f"The input's measured exposure is “{label}” (mean {stats_in['mean']:.1f}); the chosen operation {OP_INFO[op][0]} was selected to fight that problem.",
         "All four operations are affine/linear point operations — each pixel is processed independently.",
@@ -686,7 +746,7 @@ def page_t3() -> None:
     ])
 
     st.markdown("#### Download")
-    download_button(out, f"task3_{source_basename(source)}_{op}_{str(c_val).replace('.', '_')}.png")
+    download_button(out, f"task3_{source_basename(source)}_{op}_{str(c_val).replace('.', '_')}.png", label="Download Enhanced Image")
 
 
 # ---------------------------------------------------------------------------
@@ -694,7 +754,8 @@ def page_t3() -> None:
 # ---------------------------------------------------------------------------
 
 def page_t4() -> None:
-    st.title("Task 4 · Complement (Negative) & Solarization")
+    st.markdown('<div class="task-eyebrow">LAB 02 / TASK 04</div>', unsafe_allow_html=True)
+    st.title("Complement (Negative) & Solarization")
     st.caption("Lab 2 — Pixel & Intensity Operations · Full tonal inversion vs. threshold-controlled partial inversion.")
 
     img, source = image_source("midtone_gradient.png")
@@ -758,16 +819,18 @@ def page_t4() -> None:
             f"rest of the picture, unlike the negative which changes everything."
         )
 
-    st.markdown(f"**Why this technique was selected:** {chosen}")
-    st.markdown(
-        "**Visual situations where each is useful.** *Negative*: viewing shadow detail, "
-        "X-ray aesthetics, checking whether an image is balanced (the negative often reveals "
-        "problems). *Solarization*: dramatic highlight effects, halftone-style art, or "
-        "selectively flattening overexposed regions.\n\n"
-        "**Limitation:** both are point operations — they reorder tonal values but never "
-        "recover lost detail. Solarization creates a visible band at the threshold (by "
-        "design); the negative inverts *all* information, so it is rarely the final output."
-    )
+    with st.expander("Technique comparison and limitations"):
+        st.markdown(f"**Why this technique was selected:** {chosen}")
+        st.markdown(
+            "**Visual situations where each is useful.** *Negative*: viewing shadow detail, "
+            "X-ray aesthetics, checking whether an image is balanced (the negative often reveals "
+            "problems). *Solarization*: dramatic highlight effects, halftone-style art, or "
+            "selectively flattening overexposed regions.\n\n"
+            "**Limitation:** both are point operations — they reorder tonal values but never "
+            "recover lost detail. Solarization creates a visible band at the threshold (by "
+            "design); the negative inverts *all* information, so it is rarely the final output."
+        )
+
     discussion([
         "Negative = full mirror of the intensity axis: out = 255 − I.",
         "Solarization = the negative applied only above threshold T; T is the control knob (T=0 collapses to the full negative).",
@@ -777,7 +840,7 @@ def page_t4() -> None:
 
     st.markdown("#### Download")
     tag = "negative" if mode.startswith("Negative") else f"solarize_T{threshold}"
-    download_button(out, f"task4_{source_basename(source)}_{tag}.png")
+    download_button(out, f"task4_{source_basename(source)}_{tag}.png", label="Download Processed Image")
 
 
 # ---------------------------------------------------------------------------
@@ -793,47 +856,67 @@ CHANNEL_EFFECT = {
 
 
 def page_t5() -> None:
-    st.title("Task 5 · Color Channel Elimination")
+    st.markdown('<div class="task-eyebrow">LAB 02 / TASK 05</div>', unsafe_allow_html=True)
+    st.title("Color Channel Elimination")
     st.caption("Lab 2 — Pixel & Intensity Operations · Examine the RGB matrix, then zero exactly one channel and observe the result.")
 
     img, source = image_source("color_cast.png")
     rgb = ops.bgr_to_rgb(img)
 
-    st.markdown("#### Original image")
-    show_image(rgb, "Original (RGB)", order="rgb")
-
     ch_stats = metrics.channel_stats(rgb)
-    st.markdown("#### RGB channel statistics")
-    st.table(ch_stats)
+    with st.expander("Inspect RGB channel statistics", expanded=True):
+        st.table(ch_stats)
 
     means = {r["Channel"]: r["Mean"] for r in ch_stats}
-    top_ch = max(means, key=means.get)
-    bottom_ch = min(means, key=means.get)
-    if means[top_ch] - means[bottom_ch] > 20:
-        st.info(
-            f"Observed imbalance: the **{top_ch}** channel is the brightest on average "
-            f"({means[top_ch]:.1f}) while **{bottom_ch}** is the dimmest ({means[bottom_ch]:.1f}). "
-            f"A dominant channel usually signals a **color cast** in that direction; a very "
-            f"dim channel may have **lost detail** (e.g. clipped or underexposed content)."
-        )
+    ranked = sorted(means, key=means.get, reverse=True)
+    strongest, second, weakest = ranked
+    spread = means[strongest] - means[weakest]
+    two_channels_high = (
+        means[second] - means[weakest] > 20
+        and means[strongest] - means[second] < 20
+    )
+
+    if spread > 20:
+        if two_channels_high:
+            tint = {
+                frozenset(("Red", "Green")): "yellow / warm",
+                frozenset(("Red", "Blue")): "magenta",
+                frozenset(("Green", "Blue")): "cyan",
+            }[frozenset((strongest, second))]
+            st.info(
+                f"Channel summary: **{strongest}** ({means[strongest]:.1f}) and "
+                f"**{second}** ({means[second]:.1f}) are both stronger on average than "
+                f"**{weakest}** ({means[weakest]:.1f}). This pattern is consistent with "
+                f"a **{tint} tendency** in the overall image, but whole-image means "
+                f"alone cannot prove an unwanted color cast."
+            )
+        else:
+            st.info(
+                f"Channel summary: **{strongest}** has the highest average "
+                f"({means[strongest]:.1f}), while **{weakest}** has the lowest "
+                f"({means[weakest]:.1f}). This difference may reflect the actual "
+                f"scene colors, not necessarily a color cast."
+            )
         guidance = (
-            f"Guidance for *this* image: the cast is dominated by {top_ch} (highest mean), so "
-            f"eliminating **{top_ch}** is the most dramatic way to show how much of the picture's "
-            f"appearance that channel carries — the dominant tint is removed from the rendered "
-            f"image and the remaining two channels take over. If instead a region looks "
-            f"detail-poor, check the dimmest channel ({bottom_ch}): hidden detail *may* live in "
-            f"the channel that is currently suppressed. You still choose the final channel below."
+            f"To investigate this image, compare the RGB values in relevant objects, "
+            f"especially areas expected to be neutral gray or white. "
+            f"Select one channel to eliminate and observe what visual information "
+            f"disappears or becomes easier to inspect. The largest mean does **not** "
+            f"automatically identify the best channel to remove. "
+            f"Eliminating a channel is a diagnostic visualization, not white balancing."
         )
     else:
-        st.info("Channel means are fairly balanced — no strong cast is present in this image.")
+        st.info(
+            "Whole-image channel averages are relatively close. This does not prove "
+            "correct color balance: inspect regions that should be neutral as well."
+        )
         guidance = (
-            f"Guidance for *this* image: the channels are balanced, so any elimination is purely "
-            f"diagnostic. If a real image had a cast, pick the **brightest** (dominant) channel "
-            f"to remove it; if a real image looked faded/detail-poor, look at the **dimmest** "
-            f"channel for hidden information."
+            "Pick the channel whose contribution you want to inspect. "
+            "Removing one channel may expose a useful visual difference, "
+            "but it should not be described as reliable color correction."
         )
 
-    with st.expander("🔢 Sample pixels from the RGB matrix (5×5 around center)"):
+    with st.expander("Sample pixels from the RGB matrix (5×5 around center)"):
         matrix_excerpt_table(rgb, size=5)
 
     ch_name = st.selectbox("Channel to eliminate (set to 0)", list(CHANNEL_NAMES.values()))
@@ -847,31 +930,33 @@ def page_t5() -> None:
     with c2:
         st.image(out, caption=f"Result with {ch_name} channel = 0")
 
-    st.markdown(f"**What changed:** {CHANNEL_EFFECT[ch_name]}")
-    st.markdown(f"**{guidance}**")
-    formula_box(
-        "For a pixel (R, G, B):\n"
-        f"eliminate Red    -> (0,   G, B)\n"
-        f"eliminate Green  -> (R,   0, B)\n"
-        f"eliminate Blue   -> (R,   G, 0)\n\n"
-        "Exactly one channel is zeroed; the other two are byte-for-byte unchanged.",
-        "Rule applied",
-    )
-    st.markdown(
-        "**Important honesty note:** eliminating a channel is a *diagnostic experiment*, not a "
-        "quality improvement. The result is deliberately unnatural — it shows *what that channel "
-        "was contributing*, not a corrected photo. Real color correction (white balance, "
-        "channel scaling) is a different technique."
-    )
+    with st.expander("How to interpret channel elimination"):
+        st.markdown(f"**What changed:** {CHANNEL_EFFECT[ch_name]}")
+        st.markdown(f"**{guidance}**")
+        formula_box(
+            "For a pixel (R, G, B):\n"
+            f"eliminate Red    -> (0,   G, B)\n"
+            f"eliminate Green  -> (R,   0, B)\n"
+            f"eliminate Blue   -> (R,   G, 0)\n\n"
+            "Exactly one channel is zeroed; the other two are byte-for-byte unchanged.",
+            "Rule applied",
+        )
+        st.markdown(
+            "**Important honesty note:** eliminating a channel is a *diagnostic experiment*, not a "
+            "quality improvement. The result is deliberately unnatural — it shows *what that channel "
+            "was contributing*, not a corrected photo. Real color correction (white balance, "
+            "channel scaling) is a different technique."
+        )
+
     discussion([
         "The decision is based on measured channel statistics shown above, not on a preset answer.",
         f"Selected channel: {ch_name}. Effect: the image is re-rendered from the remaining two primaries.",
-        "Removing the dominant channel is the strongest demonstration of a color cast; removing the dimmest reveals what that channel was hiding.",
+        "Channel means describe image content but cannot alone prove a color cast; inspect neutral regions and the selected output.",
         "Limitation: this is lossy (the removed channel's data is gone in the displayed result) and never a real color correction.",
     ])
 
     st.markdown("#### Download")
-    download_button(out, f"task5_{source_basename(source)}_{ch_name.lower()}_removed.png", order="rgb")
+    download_button(out, f"task5_{source_basename(source)}_{ch_name.lower()}_removed.png", order="rgb", label="Download Channel-Eliminated Image")
 
 
 # ---------------------------------------------------------------------------
@@ -879,7 +964,8 @@ def page_t5() -> None:
 # ---------------------------------------------------------------------------
 
 def page_t6() -> None:
-    st.title("Task 6 · Histogram Enhancement")
+    st.markdown('<div class="task-eyebrow">LAB 03 / TASK 06</div>', unsafe_allow_html=True)
+    st.title("Histogram Enhancement")
     st.caption("Lab 3 — Histogram Enhancement · Start from a low-contrast image, measure its histogram, pick stretching or equalization.")
 
     img, source = image_source("low_contrast.png")
@@ -931,13 +1017,14 @@ def page_t6() -> None:
         "Histogram before / after — computed from the actual pixel data",
     ))
 
-    stats_table(
-        [
-            {"Image": "Original", **format_stats(metrics.intensity_stats(gray_in))},
-            {"Image": f"Enhanced ({method})", **format_stats(metrics.intensity_stats(gray_out))},
-        ],
-        "Intensity statistics (luminance)",
-    )
+    with st.expander("Inspect detailed intensity statistics"):
+        stats_table(
+            [
+                {"Image": "Original", **format_stats(metrics.intensity_stats(gray_in))},
+                {"Image": f"Enhanced ({method})", **format_stats(metrics.intensity_stats(gray_out))},
+            ],
+            "Intensity statistics (luminance)",
+        )
 
     if method.startswith("A"):
         formula_box(
@@ -977,16 +1064,18 @@ def page_t6() -> None:
             "extremes."
         )
 
-    st.markdown(
-        f"""
-**Contrast vs. brightness.** *Brightness* is the overall level of the intensities
-(the histogram's position); *contrast* is how spread out they are (the histogram's
-width). Stretching and equalization change **contrast**; the optional slider above
-changes **brightness** — the two effects are independent, which is why both are offered.
+    with st.expander("Why this enhancement method?"):
+        st.markdown(
+            f"""
+    **Contrast vs. brightness.** *Brightness* is the overall level of the intensities
+    (the histogram's position); *contrast* is how spread out they are (the histogram's
+    width). Stretching and equalization change **contrast**; the optional slider above
+    changes **brightness** — the two effects are independent, which is why both are offered.
+    
+    {why}
+    """
+        )
 
-{why}
-"""
-    )
     discussion([
         "Stretching: linear, depends only on the image's min/max — simple and predictable, but one outlier pixel can dominate the scale.",
         "Equalization: adaptive (uses the full CDF) — stronger on concentrated histograms, but amplifies noise and can exaggerate background.",
@@ -996,7 +1085,7 @@ changes **brightness** — the two effects are independent, which is why both ar
 
     st.markdown("#### Download")
     tag = "stretch" if method.startswith("A") else "equalize"
-    download_button(out, f"task6_{source_basename(source)}_{tag}.png")
+    download_button(out, f"task6_{source_basename(source)}_{tag}.png", label="Download Enhanced Image")
 
 
 # ---------------------------------------------------------------------------
@@ -1008,35 +1097,45 @@ def format_snr(v: float) -> str:
 
 
 def page_t7() -> None:
-    st.title("Task 7 · Noise Reduction & SNR")
+    st.markdown('<div class="task-eyebrow">LAB 04–05 / TASK 07</div>', unsafe_allow_html=True)
+    st.title("Noise Reduction & SNR")
     st.caption("Labs 4–5 — Filtering · Inject artificial noise into a clean image, remove it with a suitable filter, measure SNR from scratch.")
 
     clean, source = image_source("detail_scene.png")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        seed = st.number_input("Random seed (reproducible experiments)", 0, 1_000_000, 42, step=1)
+    st.markdown(
+        '<div class="source-heading">EXPERIMENT SETTINGS</div>',
+        unsafe_allow_html=True,
+    )
+    noise_col, strength_col, filter_col = st.columns([1.2, 1, 1.1], gap="large")
+    with noise_col:
         noise_type = st.radio(
             "Noise type",
             ["Salt-and-pepper (impulse) noise", "Gaussian (additive) noise"],
-            horizontal=True,
         )
-    with c2:
+        seed = st.number_input(
+            "Random seed", 0, 1_000_000, 42, step=1,
+            help="The same seed produces the same synthetic noise pattern.",
+        )
+
+    with strength_col:
         if noise_type.startswith("Salt"):
-            ratio = st.slider("Corrupted-pixel ratio (0.01 – 0.50)", 0.01, 0.50, 0.08, 0.01)
+            ratio = st.slider("Corrupted pixel ratio", 0.01, 0.50, 0.08, 0.01)
             noisy = ops.add_salt_and_pepper(clean, ratio, int(seed))
             recommended = "Median filter"
         else:
-            sigma = st.slider("Gaussian standard deviation σ (5 – 60)", 5, 60, 15, 1)
+            sigma = st.slider("Gaussian noise σ", 5, 60, 15, 1)
             noisy = ops.add_gaussian_noise(clean, sigma, int(seed))
             recommended = "Gaussian filter"
+        st.caption(f"Recommended: {recommended}")
 
-    filter_name = st.selectbox(
-        "Smoothing filter (manual selection allowed)",
-        list(ops.SMOOTHING_FILTERS.keys()),
-        index=list(ops.SMOOTHING_FILTERS.keys()).index(recommended),
-    )
-    ksize = st.slider("Filter kernel size (odd)", 3, 15, 5, 2)
+    with filter_col:
+        filter_name = st.selectbox(
+            "Smoothing filter",
+            list(ops.SMOOTHING_FILTERS.keys()),
+            index=list(ops.SMOOTHING_FILTERS.keys()).index(recommended),
+        )
+        ksize = st.slider("Filter kernel size (odd)", 3, 15, 5, 2)
     denoised = ops.SMOOTHING_FILTERS[filter_name](noisy, iu.odd_kernel(ksize))
 
     if filter_name != recommended:
@@ -1055,16 +1154,28 @@ def page_t7() -> None:
     parts_den = metrics.snr_parts(clean, denoised)
     m1, m2 = st.columns(2)
     m1.metric("SNR — before denoising (noisy vs clean)", format_snr(parts_noisy["snr_db"]))
-    m2.metric("SNR — after denoising (denoised vs clean)", format_snr(parts_den["snr_db"]))
-
-    st.markdown("**Numbers behind the SNR** (same clean reference for both)")
-    st.table(
-        [
-            {"Quantity": "Signal power  Σ S²", "Noisy": f"{parts_noisy['signal_power']:.0f}", "Denoised": f"{parts_den['signal_power']:.0f}"},
-            {"Quantity": "Noise power  Σ (S−X)²", "Noisy": f"{parts_noisy['noise_power']:.0f}", "Denoised": f"{parts_den['noise_power']:.0f}"},
-            {"Quantity": "SNR (dB)", "Noisy": format_snr(parts_noisy["snr_db"]), "Denoised": format_snr(parts_den["snr_db"])},
-        ]
+    snr_before = parts_noisy["snr_db"]
+    snr_after = parts_den["snr_db"]
+    improvement = (
+        f"{snr_after - snr_before:+.2f} dB"
+        if np.isfinite(snr_before) and np.isfinite(snr_after)
+        else None
     )
+    m2.metric(
+        "SNR — after denoising (denoised vs clean)",
+        format_snr(snr_after),
+        delta=improvement,
+        delta_color="normal",
+    )
+
+    with st.expander("Inspect the SNR calculation values (same clean reference)"):
+        st.table(
+            [
+                {"Quantity": "Signal power  Σ S²", "Noisy": f"{parts_noisy['signal_power']:.0f}", "Denoised": f"{parts_den['signal_power']:.0f}"},
+                {"Quantity": "Noise power  Σ (S−X)²", "Noisy": f"{parts_noisy['noise_power']:.0f}", "Denoised": f"{parts_den['noise_power']:.0f}"},
+                {"Quantity": "SNR (dB)", "Noisy": format_snr(parts_noisy["snr_db"]), "Denoised": format_snr(parts_den["snr_db"])},
+            ]
+        )
 
     why_filter = (
         f"The **{filter_name}** was used. The recommendation logic: *salt-and-pepper* noise "
@@ -1086,14 +1197,20 @@ def page_t7() -> None:
         "relative to the reference signal.",
         "SNR calculation",
     )
-    st.markdown(f"**Why this filter:** {why_filter}")
-    st.markdown(
-        "**Interpretation:** the *before* SNR quantifies the damage the noise did; the *after* "
-        "SNR quantifies how much of the clean signal the filter recovered. A good denoiser "
-        "raises the SNR (reduces noise power). Note that any smoothing also removes real "
-        "high-frequency detail, so the denoised image is a trade-off: less noise, slightly "
-        "softer edges."
+    st.caption(
+        f"Selected filter: {filter_name}. Recommended for {noise_type.split(' (')[0]}: "
+        f"{recommended}. Compare the SNR values above to assess the result."
     )
+    with st.expander("Why this filter? Interpretation and limitations"):
+        st.markdown(f"**Why this filter:** {why_filter}")
+        st.markdown(
+            "**Interpretation:** the *before* SNR quantifies the damage the noise did; the *after* "
+            "SNR quantifies how much of the clean signal the filter recovered. A good denoiser "
+            "raises the SNR (reduces noise power). Note that any smoothing also removes real "
+            "high-frequency detail, so the denoised image is a trade-off: less noise, slightly "
+            "softer edges."
+        )
+
     discussion([
         f"Noise model: {noise_type}, generated with NumPy and seed {int(seed)} — the same seed always reproduces the same noisy image.",
         f"Filter: {filter_name} (kernel {iu.odd_kernel(ksize)}×{iu.odd_kernel(ksize)}). Recommended for this noise type: {recommended}.",
@@ -1105,9 +1222,9 @@ def page_t7() -> None:
     st.markdown("#### Download")
     c1, c2 = st.columns(2)
     with c1:
-        download_button(noisy, f"task7_{source_basename(source)}_noisy.png")
+        download_button(noisy, f"task7_{source_basename(source)}_noisy.png", label="Download Noisy Image")
     with c2:
-        download_button(denoised, f"task7_{source_basename(source)}_denoised_{filter_name.split()[0].lower()}.png")
+        download_button(denoised, f"task7_{source_basename(source)}_denoised_{filter_name.split()[0].lower()}.png", label="Download Denoised Image")
 
 
 # ---------------------------------------------------------------------------
@@ -1136,7 +1253,8 @@ KERNEL_CUSTOM_STR = (
 
 
 def page_t8() -> None:
-    st.title("Task 8 · Detail Enhancement (Blur → Sharpening)")
+    st.markdown('<div class="task-eyebrow">LAB 04–05 / TASK 08</div>', unsafe_allow_html=True)
+    st.title("Detail Enhancement (Blur → Sharpening)")
     st.caption("Labs 4–5 — Filtering · Deliberately blur a clean image, then sharpen it and see what comes back.")
 
     clean, source = image_source("detail_scene.png")
@@ -1201,16 +1319,18 @@ def page_t8() -> None:
 
     formula_box(kernel_block, "Kernel / expression used")
 
-    st.markdown(f"**Why this technique was chosen:** {explainer}")
-    st.markdown(
-        f"The image was first **blurred on purpose** (Gaussian, kernel {iu.odd_kernel(blur_k)}) so "
-        "that the sharpening has a visible job to do. **Scientific honesty:** Gaussian blur is a "
-        "low-pass filter — it permanently discards high-frequency information (information is "
-        "lost, not just hidden). Sharpening re-emphasizes the high frequencies that *survived* "
-        "the blur, so the result can look crisper, but it **cannot reconstruct** the detail the "
-        "blur destroyed, and it will also amplify any noise present. That is why real pipelines "
-        "sharpen carefully and never treat sharpening as an undo button."
-    )
+    with st.expander("Why this sharpening technique?"):
+        st.markdown(f"**Why this technique was chosen:** {explainer}")
+        st.markdown(
+            f"The image was first **blurred on purpose** (Gaussian, kernel {iu.odd_kernel(blur_k)}) so "
+            "that the sharpening has a visible job to do. **Scientific honesty:** Gaussian blur is a "
+            "low-pass filter — it permanently discards high-frequency information (information is "
+            "lost, not just hidden). Sharpening re-emphasizes the high frequencies that *survived* "
+            "the blur, so the result can look crisper, but it **cannot reconstruct** the detail the "
+            "blur destroyed, and it will also amplify any noise present. That is why real pipelines "
+            "sharpen carefully and never treat sharpening as an undo button."
+        )
+
     discussion([
         f"Blur first: Gaussian kernel {iu.odd_kernel(blur_k)}×{iu.odd_kernel(blur_k)} — a controlled, reproducible loss of high-frequency detail.",
         f"Sharpening method: {method}. Kernel/expression shown in the formula box; parameters were chosen interactively.",
@@ -1221,9 +1341,9 @@ def page_t8() -> None:
     st.markdown("#### Download")
     c1, c2 = st.columns(2)
     with c1:
-        download_button(blurred, f"task8_{source_basename(source)}_blurred.png")
+        download_button(blurred, f"task8_{source_basename(source)}_blurred.png", label="Download Blurred Image")
     with c2:
-        download_button(sharpened, f"task8_{source_basename(source)}_sharpened_{method.split()[0].lower()}.png")
+        download_button(sharpened, f"task8_{source_basename(source)}_sharpened_{method.split()[0].lower()}.png", label="Download Sharpened Image")
 
 
 # ---------------------------------------------------------------------------
@@ -1255,7 +1375,8 @@ LAPLACIAN_EDGE_STR = ("Laplacian edge operator (second derivative, isotropic):\n
 
 
 def page_t9() -> None:
-    st.title("Task 9 · Edge Detection")
+    st.markdown('<div class="task-eyebrow">LAB 04–05 / TASK 09</div>', unsafe_allow_html=True)
+    st.title("Edge Detection")
     st.caption("Labs 4–5 — Filtering · Choose an operator that reveals the structural boundaries of the image.")
 
     img, source = image_source("geometric_edges.png")
@@ -1316,8 +1437,9 @@ def page_t9() -> None:
         st.image(edges, channels="grayscale", caption=f"Edge map — {method}")
 
     formula_box(formula_block, f"Operator — {method}")
-    st.markdown(f"**Why this operator was chosen:** {explainer}")
-    st.markdown(f"**When to prefer it:** {when} Structural note: on this image you can check that the operator traces exactly the square, the circle, the diagonal, the text and the small dot — that is what 'revealing structural boundaries' means, and different operators do it with different thickness and cleanliness.")
+    with st.expander("Why choose this edge operator?"):
+        st.markdown(f"**Why this operator was chosen:** {explainer}")
+        st.markdown(f"**When to prefer it:** {when} Structural note: on this image you can check that the operator traces exactly the square, the circle, the diagonal, the text and the small dot — that is what 'revealing structural boundaries' means, and different operators do it with different thickness and cleanliness.")
 
     discussion([
         f"Operator: {method} with the parameters shown. The edge map is generated live from the grayscale conversion of the displayed image.",
@@ -1327,7 +1449,7 @@ def page_t9() -> None:
     ])
 
     st.markdown("#### Download")
-    download_button(edges, f"task9_{source_basename(source)}_{method.lower()}_edges.png")
+    download_button(edges, f"task9_{source_basename(source)}_{method.lower()}_edges.png", label="Download Edge Map")
 
 
 # ---------------------------------------------------------------------------
@@ -1348,7 +1470,6 @@ def main() -> None:
         "t9": page_t9,
     }
     nav_key = render_sidebar()
-    st.divider()
     pages[nav_key]()
 
 

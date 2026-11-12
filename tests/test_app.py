@@ -228,3 +228,126 @@ def test_sobel_explanation_uses_standard_kernels():
     assert "[  1   2   1 ]" in text
     # The old, non-standard [-2,0,2 / -1,0,1 / 2,0,-2] kernel must be gone
     assert "[ -2   0   2 ]\n  [ -1   0   1 ]\n  [  2   0  -2 ]" not in text
+
+
+def test_dashboard_ui_is_clean_and_has_no_raw_markdown_cards():
+    """Guard the professional dashboard against emoji and literal ** markers."""
+    import re
+    source = open(APP_PATH, encoding="utf-8").read()
+    assert not re.search(r"[\U0001F300-\U0001FAFF]", source)
+    assert "**Task 1**" not in source
+    assert 'class="lab-card"' in source
+    assert "Quick navigation — select a module" in source
+    assert source.count('class="task-eyebrow"') == 9
+
+
+
+def test_rgb_matrix_excerpt_is_a_compact_spatial_grid(monkeypatch):
+    """The 5x5 excerpt should display five image rows, not 25 flat records."""
+    import numpy as np
+
+    captured = {}
+    monkeypatch.setattr(
+        app_module().st, "table", lambda data, **kwargs: captured.update(data=data)
+    )
+    rgb = np.zeros((7, 9, 3), dtype=np.uint8)
+    rgb[3, 4] = [12, 34, 56]
+    app_module().matrix_excerpt_table(rgb, size=5, center=(3, 4))
+    rows = captured["data"]
+
+    assert len(rows) == 5
+    assert len(rows[0]) == 6  # one row label + five coordinate columns
+    assert rows[2]["4"] == "(12, 34, 56)"
+    assert rows[0]["Row / Col"] == "1"
+
+
+def test_download_button_allows_specific_channel_label(monkeypatch):
+    """Download buttons should identify which output is being saved."""
+    import numpy as np
+
+    captured = {}
+    def fake_download(label, data, *args, **kwargs):
+        captured["label"] = label
+        captured["data"] = data
+
+    monkeypatch.setattr(app_module().st, "download_button", fake_download)
+    app_module().download_button(
+        np.zeros((2, 2, 3), dtype=np.uint8),
+        "red.png",
+        order="rgb",
+        label="Download Red",
+    )
+    assert captured["label"] == "Download Red"
+    assert captured["data"].startswith(b"\x89PNG")
+
+
+# ---------------------------------------------------------------------------
+# REGRESSION: concise sample menu and Task 7 controls
+# ---------------------------------------------------------------------------
+
+def test_sample_picker_keeps_description_outside_options():
+    """Long sample descriptions must not overflow the shared dropdown."""
+    source = open(APP_PATH, encoding="utf-8").read()
+    assert "format_func=lambda s: s," in source
+    assert 'st.caption(f"Sample details: {description}")' in source
+
+
+def test_task7_noise_selector_gaussian():
+    """Check that switching Task 7 to Gaussian noise still renders SNR."""
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file(APP_PATH, default_timeout=60)
+    at.session_state["nav"] = dict(app_module().NAV)["t7"]
+    at.run()
+    assert not at.exception
+
+    noise_radios = [r for r in at.main.radio if r.label == "Noise type"]
+    assert len(noise_radios) == 1
+    noise_radios[0].set_value("Gaussian (additive) noise")
+    at.run()
+    assert not at.exception
+    assert any("SNR" in (m.label or "") for m in at.main.metric)
+
+
+def test_task7_uses_clear_download_labels():
+    source = open(APP_PATH, encoding="utf-8").read()
+    task7 = source.split("def page_t7() -> None:", 1)[1].split(
+        "# Task 8", 1
+    )[0]
+    assert 'label="Download Noisy Image"' in task7
+    assert 'label="Download Denoised Image"' in task7
+    assert "delta=improvement" in task7
+
+
+# ---------------------------------------------------------------------------
+# UI REGRESSION: consistent final layouts and distinct download labels
+# ---------------------------------------------------------------------------
+
+def test_all_task_pages_have_clear_download_labels():
+    """No task page should leave outputs ambiguous as 'Download PNG'."""
+    source = open(APP_PATH, encoding="utf-8").read()
+    for task in range(1, 10):
+        start = source.index(f"def page_t{task}() -> None:")
+        if task < 9:
+            end = source.index(f"# Task {task + 1}", start)
+        else:
+            end = source.index("# Main", start)
+        section = source[start:end]
+        assert "download_button(" in section, f"Task {task} missing download"
+        for line in section.splitlines():
+            if "download_button(" in line:
+                # Task 1 passes the label in a multiline call; skip its
+                # individual lines and check the relevant label expression.
+                if task == 1:
+                    continue
+                assert "label=" in line, f"Task {task} has an ambiguous download"
+    assert 'label=f"Download {channel_name}"' in source
+
+
+def test_task5_original_not_rendered_twice():
+    source = open(APP_PATH, encoding="utf-8").read()
+    task5 = source.split("def page_t5() -> None:", 1)[1].split(
+        "# Task 6", 1
+    )[0]
+    assert task5.count('show_image(rgb, "Original (RGB)", order="rgb")') == 1
+    assert 'with st.expander("How to interpret channel elimination")' in task5
