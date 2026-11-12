@@ -1,4 +1,4 @@
-# 🧪 Image Processing Lab Studio
+# Image Processing Lab Studio
 
 An interactive, educational **Streamlit** application that implements **nine university
 image-processing tasks** across four labs. It is built for a practical evaluation and an
@@ -45,7 +45,7 @@ mathematics, and review discussion notes that justify the technique chosen.
 - Discussion notes (expander) on every page, written for oral evaluation and based on the
   actual image statistics when possible.
 - PNG download of processed results.
-- Light theme, consistent styling, responsive two/three-column layout.
+- Minimal, emoji-free dashboard with clean lab cards, compact navigation, accessible image-source controls, and responsive two/three-column layouts.
 
 ## 4. The nine tasks (by lab)
 
