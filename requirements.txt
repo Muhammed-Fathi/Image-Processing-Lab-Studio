@@ -1,0 +1,8 @@
+# Image Processing Lab Studio - runtime dependencies
+# (Python 3.10+). Install with:  pip install -r requirements.txt
+
+streamlit>=1.36,<2.0
+opencv-python-headless>=4.9,<6.0
+numpy>=1.26,<3.0
+matplotlib>=3.8,<4.0
+pillow>=10.0,<14.0
