@@ -228,3 +228,14 @@ def test_sobel_explanation_uses_standard_kernels():
     assert "[  1   2   1 ]" in text
     # The old, non-standard [-2,0,2 / -1,0,1 / 2,0,-2] kernel must be gone
     assert "[ -2   0   2 ]\n  [ -1   0   1 ]\n  [  2   0  -2 ]" not in text
+
+
+def test_dashboard_ui_is_clean_and_has_no_raw_markdown_cards():
+    """Guard the professional dashboard against emoji and literal ** markers."""
+    import re
+    source = open(APP_PATH, encoding="utf-8").read()
+    assert not re.search(r"[\U0001F300-\U0001FAFF]", source)
+    assert "**Task 1**" not in source
+    assert 'class="lab-card"' in source
+    assert "Quick navigation — select a module" in source
+    assert source.count('class="task-eyebrow"') == 1 or "task-eyebrow" in source
