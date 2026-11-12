@@ -119,7 +119,7 @@ def image_source(default_sample: str, color_preferred: bool = True):
                 "Demonstration image",
                 samples,
                 index=idx,
-                format_func=lambda s: f"{s}  ·  {iu.SAMPLE_INFO.get(s, '')}",
+                format_func=lambda s: s,
                 label_visibility="visible",
             )
     with c2:
@@ -128,6 +128,11 @@ def image_source(default_sample: str, color_preferred: bool = True):
             type=ACCEPTED_FORMATS,
             label_visibility="visible",
         )
+
+    if up is None and choice is not None:
+        description = iu.SAMPLE_INFO.get(choice)
+        if description:
+            st.caption(f"Sample details: {description}")
 
     if up is not None:
         data = up.getvalue()
@@ -1068,30 +1073,39 @@ def page_t7() -> None:
 
     clean, source = image_source("detail_scene.png")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        seed = st.number_input("Random seed (reproducible experiments)", 0, 1_000_000, 42, step=1)
+    st.markdown(
+        '<div class="source-heading">EXPERIMENT SETTINGS</div>',
+        unsafe_allow_html=True,
+    )
+    noise_col, strength_col, filter_col = st.columns([1.2, 1, 1.1], gap="large")
+    with noise_col:
         noise_type = st.radio(
             "Noise type",
             ["Salt-and-pepper (impulse) noise", "Gaussian (additive) noise"],
-            horizontal=True,
         )
-    with c2:
+        seed = st.number_input(
+            "Random seed", 0, 1_000_000, 42, step=1,
+            help="The same seed produces the same synthetic noise pattern.",
+        )
+
+    with strength_col:
         if noise_type.startswith("Salt"):
-            ratio = st.slider("Corrupted-pixel ratio (0.01 – 0.50)", 0.01, 0.50, 0.08, 0.01)
+            ratio = st.slider("Corrupted pixel ratio", 0.01, 0.50, 0.08, 0.01)
             noisy = ops.add_salt_and_pepper(clean, ratio, int(seed))
             recommended = "Median filter"
         else:
-            sigma = st.slider("Gaussian standard deviation σ (5 – 60)", 5, 60, 15, 1)
+            sigma = st.slider("Gaussian noise σ", 5, 60, 15, 1)
             noisy = ops.add_gaussian_noise(clean, sigma, int(seed))
             recommended = "Gaussian filter"
+        st.caption(f"Recommended: {recommended}")
 
-    filter_name = st.selectbox(
-        "Smoothing filter (manual selection allowed)",
-        list(ops.SMOOTHING_FILTERS.keys()),
-        index=list(ops.SMOOTHING_FILTERS.keys()).index(recommended),
-    )
-    ksize = st.slider("Filter kernel size (odd)", 3, 15, 5, 2)
+    with filter_col:
+        filter_name = st.selectbox(
+            "Smoothing filter",
+            list(ops.SMOOTHING_FILTERS.keys()),
+            index=list(ops.SMOOTHING_FILTERS.keys()).index(recommended),
+        )
+        ksize = st.slider("Filter kernel size (odd)", 3, 15, 5, 2)
     denoised = ops.SMOOTHING_FILTERS[filter_name](noisy, iu.odd_kernel(ksize))
 
     if filter_name != recommended:
@@ -1110,16 +1124,28 @@ def page_t7() -> None:
     parts_den = metrics.snr_parts(clean, denoised)
     m1, m2 = st.columns(2)
     m1.metric("SNR — before denoising (noisy vs clean)", format_snr(parts_noisy["snr_db"]))
-    m2.metric("SNR — after denoising (denoised vs clean)", format_snr(parts_den["snr_db"]))
-
-    st.markdown("**Numbers behind the SNR** (same clean reference for both)")
-    st.table(
-        [
-            {"Quantity": "Signal power  Σ S²", "Noisy": f"{parts_noisy['signal_power']:.0f}", "Denoised": f"{parts_den['signal_power']:.0f}"},
-            {"Quantity": "Noise power  Σ (S−X)²", "Noisy": f"{parts_noisy['noise_power']:.0f}", "Denoised": f"{parts_den['noise_power']:.0f}"},
-            {"Quantity": "SNR (dB)", "Noisy": format_snr(parts_noisy["snr_db"]), "Denoised": format_snr(parts_den["snr_db"])},
-        ]
+    snr_before = parts_noisy["snr_db"]
+    snr_after = parts_den["snr_db"]
+    improvement = (
+        f"{snr_after - snr_before:+.2f} dB"
+        if np.isfinite(snr_before) and np.isfinite(snr_after)
+        else None
     )
+    m2.metric(
+        "SNR — after denoising (denoised vs clean)",
+        format_snr(snr_after),
+        delta=improvement,
+        delta_color="normal",
+    )
+
+    with st.expander("Inspect the SNR calculation values (same clean reference)"):
+        st.table(
+            [
+                {"Quantity": "Signal power  Σ S²", "Noisy": f"{parts_noisy['signal_power']:.0f}", "Denoised": f"{parts_den['signal_power']:.0f}"},
+                {"Quantity": "Noise power  Σ (S−X)²", "Noisy": f"{parts_noisy['noise_power']:.0f}", "Denoised": f"{parts_den['noise_power']:.0f}"},
+                {"Quantity": "SNR (dB)", "Noisy": format_snr(parts_noisy["snr_db"]), "Denoised": format_snr(parts_den["snr_db"])},
+            ]
+        )
 
     why_filter = (
         f"The **{filter_name}** was used. The recommendation logic: *salt-and-pepper* noise "
@@ -1160,9 +1186,9 @@ def page_t7() -> None:
     st.markdown("#### Download")
     c1, c2 = st.columns(2)
     with c1:
-        download_button(noisy, f"task7_{source_basename(source)}_noisy.png")
+        download_button(noisy, f"task7_{source_basename(source)}_noisy.png", label="Download Noisy Image")
     with c2:
-        download_button(denoised, f"task7_{source_basename(source)}_denoised_{filter_name.split()[0].lower()}.png")
+        download_button(denoised, f"task7_{source_basename(source)}_denoised_{filter_name.split()[0].lower()}.png", label="Download Denoised Image")
 
 
 # ---------------------------------------------------------------------------
