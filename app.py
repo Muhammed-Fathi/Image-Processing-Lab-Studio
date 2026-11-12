@@ -868,30 +868,52 @@ def page_t5() -> None:
         st.table(ch_stats)
 
     means = {r["Channel"]: r["Mean"] for r in ch_stats}
-    top_ch = max(means, key=means.get)
-    bottom_ch = min(means, key=means.get)
-    if means[top_ch] - means[bottom_ch] > 20:
-        st.info(
-            f"Observed imbalance: the **{top_ch}** channel is the brightest on average "
-            f"({means[top_ch]:.1f}) while **{bottom_ch}** is the dimmest ({means[bottom_ch]:.1f}). "
-            f"A dominant channel usually signals a **color cast** in that direction; a very "
-            f"dim channel may have **lost detail** (e.g. clipped or underexposed content)."
-        )
+    ranked = sorted(means, key=means.get, reverse=True)
+    strongest, second, weakest = ranked
+    spread = means[strongest] - means[weakest]
+    two_channels_high = (
+        means[second] - means[weakest] > 20
+        and means[strongest] - means[second] < 20
+    )
+
+    if spread > 20:
+        if two_channels_high:
+            tint = {
+                frozenset(("Red", "Green")): "yellow / warm",
+                frozenset(("Red", "Blue")): "magenta",
+                frozenset(("Green", "Blue")): "cyan",
+            }[frozenset((strongest, second))]
+            st.info(
+                f"Channel summary: **{strongest}** ({means[strongest]:.1f}) and "
+                f"**{second}** ({means[second]:.1f}) are both stronger on average than "
+                f"**{weakest}** ({means[weakest]:.1f}). This pattern is consistent with "
+                f"a **{tint} tendency** in the overall image, but whole-image means "
+                f"alone cannot prove an unwanted color cast."
+            )
+        else:
+            st.info(
+                f"Channel summary: **{strongest}** has the highest average "
+                f"({means[strongest]:.1f}), while **{weakest}** has the lowest "
+                f"({means[weakest]:.1f}). This difference may reflect the actual "
+                f"scene colors, not necessarily a color cast."
+            )
         guidance = (
-            f"Guidance for *this* image: the cast is dominated by {top_ch} (highest mean), so "
-            f"eliminating **{top_ch}** is the most dramatic way to show how much of the picture's "
-            f"appearance that channel carries — the dominant tint is removed from the rendered "
-            f"image and the remaining two channels take over. If instead a region looks "
-            f"detail-poor, check the dimmest channel ({bottom_ch}): hidden detail *may* live in "
-            f"the channel that is currently suppressed. You still choose the final channel below."
+            f"To investigate this image, compare the RGB values in relevant objects, "
+            f"especially areas expected to be neutral gray or white. "
+            f"Select one channel to eliminate and observe what visual information "
+            f"disappears or becomes easier to inspect. The largest mean does **not** "
+            f"automatically identify the best channel to remove. "
+            f"Eliminating a channel is a diagnostic visualization, not white balancing."
         )
     else:
-        st.info("Channel means are fairly balanced — no strong cast is present in this image.")
+        st.info(
+            "Whole-image channel averages are relatively close. This does not prove "
+            "correct color balance: inspect regions that should be neutral as well."
+        )
         guidance = (
-            f"Guidance for *this* image: the channels are balanced, so any elimination is purely "
-            f"diagnostic. If a real image had a cast, pick the **brightest** (dominant) channel "
-            f"to remove it; if a real image looked faded/detail-poor, look at the **dimmest** "
-            f"channel for hidden information."
+            "Pick the channel whose contribution you want to inspect. "
+            "Removing one channel may expose a useful visual difference, "
+            "but it should not be described as reliable color correction."
         )
 
     with st.expander("Sample pixels from the RGB matrix (5×5 around center)"):
@@ -929,7 +951,7 @@ def page_t5() -> None:
     discussion([
         "The decision is based on measured channel statistics shown above, not on a preset answer.",
         f"Selected channel: {ch_name}. Effect: the image is re-rendered from the remaining two primaries.",
-        "Removing the dominant channel is the strongest demonstration of a color cast; removing the dimmest reveals what that channel was hiding.",
+        "Channel means describe image content but cannot alone prove a color cast; inspect neutral regions and the selected output.",
         "Limitation: this is lossy (the removed channel's data is gone in the displayed result) and never a real color correction.",
     ])
 
