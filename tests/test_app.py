@@ -239,3 +239,43 @@ def test_dashboard_ui_is_clean_and_has_no_raw_markdown_cards():
     assert 'class="lab-card"' in source
     assert "Quick navigation — select a module" in source
     assert source.count('class="task-eyebrow"') == 9
+
+
+
+def test_rgb_matrix_excerpt_is_a_compact_spatial_grid(monkeypatch):
+    """The 5x5 excerpt should display five image rows, not 25 flat records."""
+    import numpy as np
+
+    captured = {}
+    monkeypatch.setattr(
+        app_module().st, "table", lambda data, **kwargs: captured.update(data=data)
+    )
+    rgb = np.zeros((7, 9, 3), dtype=np.uint8)
+    rgb[3, 4] = [12, 34, 56]
+    app_module().matrix_excerpt_table(rgb, size=5, center=(3, 4))
+    rows = captured["data"]
+
+    assert len(rows) == 5
+    assert len(rows[0]) == 6  # one row label + five coordinate columns
+    assert rows[2]["4"] == "(12, 34, 56)"
+    assert rows[0]["Row / Col"] == "1"
+
+
+def test_download_button_allows_specific_channel_label(monkeypatch):
+    """Download buttons should identify which output is being saved."""
+    import numpy as np
+
+    captured = {}
+    def fake_download(label, data, *args, **kwargs):
+        captured["label"] = label
+        captured["data"] = data
+
+    monkeypatch.setattr(app_module().st, "download_button", fake_download)
+    app_module().download_button(
+        np.zeros((2, 2, 3), dtype=np.uint8),
+        "red.png",
+        order="rgb",
+        label="Download Red",
+    )
+    assert captured["label"] == "Download Red"
+    assert captured["data"].startswith(b"\x89PNG")
