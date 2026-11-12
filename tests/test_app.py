@@ -279,3 +279,41 @@ def test_download_button_allows_specific_channel_label(monkeypatch):
     )
     assert captured["label"] == "Download Red"
     assert captured["data"].startswith(b"\x89PNG")
+
+
+# ---------------------------------------------------------------------------
+# REGRESSION: concise sample menu and Task 7 controls
+# ---------------------------------------------------------------------------
+
+def test_sample_picker_keeps_description_outside_options():
+    """Long sample descriptions must not overflow the shared dropdown."""
+    source = open(APP_PATH, encoding="utf-8").read()
+    assert "format_func=lambda s: s," in source
+    assert 'st.caption(f"Sample details: {description}")' in source
+
+
+def test_task7_noise_selector_gaussian():
+    """Check that switching Task 7 to Gaussian noise still renders SNR."""
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file(APP_PATH, default_timeout=60)
+    at.session_state["nav"] = dict(app_module().NAV)["t7"]
+    at.run()
+    assert not at.exception
+
+    noise_radios = [r for r in at.main.radio if r.label == "Noise type"]
+    assert len(noise_radios) == 1
+    noise_radios[0].set_value("Gaussian (additive) noise")
+    at.run()
+    assert not at.exception
+    assert any("SNR" in (m.label or "") for m in at.main.metric)
+
+
+def test_task7_uses_clear_download_labels():
+    source = open(APP_PATH, encoding="utf-8").read()
+    task7 = source.split("def page_t7() -> None:", 1)[1].split(
+        "# Task 8", 1
+    )[0]
+    assert 'label="Download Noisy Image"' in task7
+    assert 'label="Download Denoised Image"' in task7
+    assert "delta=improvement" in task7
