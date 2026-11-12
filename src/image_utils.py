@@ -59,8 +59,8 @@ def load_image_from_path(path: str) -> np.ndarray | None:
         return None
     if img.ndim == 2:
         return img
-    if img.ndim == 3 and img.shape[2] == 4:  # RGBA -> BGR
-        img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
+    if img.ndim == 3 and img.shape[2] == 4:  # OpenCV reads 4-channel images as BGRA
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
     if img.ndim == 3 and img.shape[2] != 3:
         return None
     if img.dtype != np.uint8:
@@ -79,8 +79,8 @@ def load_image_from_bytes(data: bytes) -> np.ndarray | None:
     img = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
     if img is None:
         return None
-    if img.ndim == 3 and img.shape[2] == 4:
-        img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
+    if img.ndim == 3 and img.shape[2] == 4:  # OpenCV decodes 4-channel images as BGRA
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
     if img.ndim > 3 or (img.ndim == 3 and img.shape[2] != 3):
         return None
     if img.dtype != np.uint8:

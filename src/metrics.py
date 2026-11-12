@@ -22,24 +22,30 @@ import numpy as np
 def snr_db(signal: np.ndarray, evaluated: np.ndarray) -> float:
     """Compute SNR in dB of `evaluated` against the clean `signal`.
 
-    * Both images must have the same shape.
+    * Both images must have the same shape (checked BEFORE flattening, so
+      same-size-but-different-shape arrays, e.g. (2,3) vs (3,2) or (6,)
+      vs (2,3), are rejected).
     * All math is done in float64 for precision.
     * If `evaluated` equals `signal` exactly, the noise power is zero and
       the SNR is infinite (perfect reconstruction) -> returns inf.
-    * If the signal itself has zero power (all-black image), returns 0.0.
+    * If the signal has zero energy but the error is non-zero, the ratio
+      is 0 and 10*log10(0) = -infinity, so float("-inf") is returned.
+      We deliberately do NOT report a fake "0 dB" for that case.
     """
-    s = np.asarray(signal, dtype=np.float64).ravel()
-    e = np.asarray(evaluated, dtype=np.float64).ravel()
-    if s.shape != e.shape:
+    sig = np.asarray(signal, dtype=np.float64)
+    eva = np.asarray(evaluated, dtype=np.float64)
+    if sig.shape != eva.shape:
         raise ValueError("signal and evaluated images must have the same shape")
 
+    s = sig.ravel()
+    e = eva.ravel()
     signal_power = float(np.sum(s * s))
     noise_power = float(np.sum((s - e) * (s - e)))
 
     if noise_power <= 0.0:
         return float("inf")  # no error at all: define SNR as infinite
     if signal_power <= 0.0:
-        return 0.0  # no signal energy; ratio would be 0 -> -inf, report 0
+        return float("-inf")  # ratio 0 -> 10*log10(0) = -infinity
 
     return float(10.0 * np.log10(signal_power / noise_power))
 

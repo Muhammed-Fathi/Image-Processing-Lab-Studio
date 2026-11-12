@@ -40,6 +40,43 @@ def test_load_image_from_bytes_garbage_returns_none():
     assert iu.load_image_from_bytes(b"") is None
 
 
+# ---------------------------------------------------------------------------
+# REGRESSION (audit issue 5): 4-channel images are BGRA in OpenCV, not RGBA
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def bgra_png(tmp_path):
+    """A 2x2 BGRA PNG whose four channels all differ, saved with cv2
+    (which writes PNGs from BGRA arrays)."""
+    img = np.zeros((2, 2, 4), dtype=np.uint8)
+    img[0, 0] = [10, 20, 30, 255]   # B, G, R, A
+    img[1, 1] = [200, 100, 50, 128]
+    path = tmp_path / "bgra.png"
+    assert cv2.imwrite(str(path), img)
+    return str(path), img
+
+
+def test_bgra_png_decoding_from_path(bgra_png):
+    path, _ = bgra_png
+    loaded = iu.load_image_from_path(path)
+    assert loaded is not None
+    assert loaded.shape == (2, 2, 3)
+    # BGR order must be preserved: (B=10, G=20, R=30) and (B=200, G=100, R=50)
+    assert loaded[0, 0].tolist() == [10, 20, 30]
+    assert loaded[1, 1].tolist() == [200, 100, 50]
+
+
+def test_bgra_png_decoding_from_bytes(bgra_png):
+    path, _ = bgra_png
+    with open(path, "rb") as f:
+        data = f.read()
+    loaded = iu.load_image_from_bytes(data)
+    assert loaded is not None
+    assert loaded.shape == (2, 2, 3)
+    assert loaded[0, 0].tolist() == [10, 20, 30]
+    assert loaded[1, 1].tolist() == [200, 100, 50]
+
+
 def test_is_valid_image_bytes(sample_png):
     with open(sample_png, "rb") as f:
         good = f.read()

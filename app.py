@@ -131,18 +131,32 @@ def source_basename(source_label: str) -> str:
     return os.path.splitext(name)[0][:40] or "image"
 
 
-def show_image(img: np.ndarray, caption: str | None = None) -> None:
-    """Display a BGR color or 2-D gray image with the right channel order."""
+def show_image(img: np.ndarray, caption: str | None = None, order: str = "bgr") -> None:
+    """Display an image with the correct color order.
+
+    `order` declares the channel order of the input array: "bgr" (OpenCV
+    default, converted before display) or "rgb" (already display-ready).
+    2-D grayscale arrays are unaffected by `order`.
+    """
     if img.ndim == 2:
         st.image(img, channels="grayscale", caption=caption)
+    elif order == "rgb":
+        st.image(img, caption=caption)
     else:
         st.image(ops.bgr_to_rgb(img), caption=caption)
 
 
-def download_button(img: np.ndarray, name: str) -> None:
+def download_button(img: np.ndarray, name: str, order: str = "bgr") -> None:
+    """Offer a PNG download.
+
+    cv2.imencode assumes the array is in BGR order, so RGB arrays are
+    converted before encoding - otherwise the exported file would have
+    swapped red and blue channels.
+    """
+    arr = img if order == "bgr" else cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     st.download_button(
         "⬇️  Download PNG",
-        iu.encode_png(img),
+        iu.encode_png(arr),
         file_name=name,
         mime="image/png",
         use_container_width=True,
@@ -216,6 +230,14 @@ def luminance(img: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def render_sidebar() -> str:
+    # Apply a queued navigation (e.g. from the dashboard quick-jump)
+    # BEFORE the radio widget is constructed. Setting the session-state
+    # value of a widget key after the widget was instantiated is ignored
+    # by Streamlit, so the new label is queued in "pending_nav" and only
+    # now, before the radio exists, is it applied to "nav".
+    pending = st.session_state.pop("pending_nav", None)
+    if pending in NAV_BY_LABEL:
+        st.session_state["nav"] = pending
     with st.sidebar:
         st.markdown("## 🧪 Image Processing Lab Studio")
         st.caption("University image-processing course · 9 tasks · 4 labs")
@@ -340,9 +362,11 @@ def page_dashboard() -> None:
         ["— choose a task —"] + [label for _, label in NAV[1:]],
     )
     if jump != "— choose a task —":
-        key = NAV_BY_LABEL[jump]
-        if st.session_state.get("nav") != key:
-            st.session_state["nav"] = key
+        # Queue the selected LABEL (a valid radio option) and rerun; the
+        # sidebar applies it to st.session_state["nav"] before the radio
+        # is constructed on the next run.
+        if st.session_state.get("pending_nav") != jump:
+            st.session_state["pending_nav"] = jump
             st.rerun()
 
 
@@ -373,7 +397,7 @@ def page_t1() -> None:
         st.image(rgb, caption="Correctly converted: `cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)`")
 
     st.markdown("#### 1 · Original image (RGB)")
-    show_image(ops.bgr_to_rgb(rgb), "Original")
+    show_image(rgb, "Original (correct color order)", order="rgb")
 
     tab_map, tab_iso, tab_px, tab_mx = st.tabs(
         ["2 · Channel intensity maps", "3 · Color-isolated images", "4 · Pixel inspector", "5 · RGB matrix excerpt"]
@@ -442,11 +466,11 @@ is made of; it is also the prerequisite for every channel-based operation in the
     base = source_basename(source)
     c1, c2, c3 = st.columns(3)
     with c1:
-        download_button(ops.isolate_channel(rgb, 0), f"task1_{base}_red_only.png")
+        download_button(ops.isolate_channel(rgb, 0), f"task1_{base}_red_only.png", order="rgb")
     with c2:
-        download_button(ops.isolate_channel(rgb, 1), f"task1_{base}_green_only.png")
+        download_button(ops.isolate_channel(rgb, 1), f"task1_{base}_green_only.png", order="rgb")
     with c3:
-        download_button(ops.isolate_channel(rgb, 2), f"task1_{base}_blue_only.png")
+        download_button(ops.isolate_channel(rgb, 2), f"task1_{base}_blue_only.png", order="rgb")
 
 
 # ---------------------------------------------------------------------------
@@ -466,7 +490,7 @@ def page_t2() -> None:
     st.markdown("#### Original vs. custom weighted grayscale")
     c1, c2, c3 = st.columns(3)
     with c1:
-        show_image(rgb, "Original (RGB)")
+        show_image(rgb, "Original (RGB)", order="rgb")
     with c2:
         st.image(gray_custom, channels="grayscale", caption="This task's output: 0.299R + 0.587G + 0.114B")
     with c3:
@@ -621,14 +645,17 @@ def page_t3() -> None:
                   f"pixels above 255−{c_val} clip to white (detail lost there). " if c_val > 0 else
                   f"Every pixel was lowered by {abs(c_val)} (detail in the darks clips to black).")
         why = ("Addition is the classic choice for an **underexposed** image: it shifts the "
-               "histogram to the right and recovers shadow detail at a constant offset, which "
-               "keeps the tonal *spacing* unchanged.")
+               "histogram to the right, lifting shadow content that is still above black. "
+               "Values that were clipped to 0 at capture time cannot be brought back by any "
+               "point operation — addition only makes the surviving dark content visible.")
     elif op == "sub":
         effect = (f"Every pixel was lowered by {c_val}. Overexposed highlights are pulled back; "
                   f"pixels below {c_val} clip to black." if c_val > 0 else
                   f"Every pixel was lifted by {abs(c_val)} (C is negative).")
         why = ("Subtraction is the classic choice for an **overexposed** image: it shifts the "
-               "histogram to the left, recovering highlight detail at a constant offset.")
+               "histogram to the left, pulling highlight content that is still below white "
+               "back into range. Highlights already clipped to 255 at capture time cannot be "
+               "restored by any point operation.")
     elif op == "mul":
         effect = (f"Every pixel was scaled by {c_val}. The whole histogram was stretched/compressed "
                   f"around zero; the darker the pixel, the smaller the absolute change.")
@@ -710,7 +737,8 @@ def page_t4() -> None:
             f"inversion those areas are bright and easy to see."
         )
     else:
-        frac = float(np.mean(luminance(img) >= threshold)) * 100
+        # The exact per-channel mask the solarize() rule acts on:
+        frac = float(np.mean(np.asarray(img, dtype=np.uint8) >= threshold)) * 100
         formula_box(
             f"out = 255 - I   if I >= T   (T = {threshold})\n"
             f"out = I         if I <  T\n\n"
@@ -721,9 +749,10 @@ def page_t4() -> None:
             "Formula — solarization",
         )
         chosen = (
-            f"**Solarization with T = {threshold}** was selected. Because only pixels with "
-            f"I ≥ T are inverted, about **{frac:.1f}% of the luminance pixels** of this image "
-            f"are affected — the highlights flip while the shadows stay put. That makes it the "
+            f"**Solarization with T = {threshold}** was selected. The rule inverts every "
+            f"stored channel value with I ≥ T, and about **{frac:.1f}% of the image's stored "
+            f"channel values** satisfy that (measured on the actual array, per channel) — the "
+            f"highlights flip while the shadows stay put. That makes it the "
             f"right choice when you want to *emphasize or re-shape only the bright areas* "
             f"(e.g. blown-out skies, bright clothing, reflections) without disturbing the "
             f"rest of the picture, unlike the negative which changes everything."
@@ -771,7 +800,7 @@ def page_t5() -> None:
     rgb = ops.bgr_to_rgb(img)
 
     st.markdown("#### Original image")
-    show_image(rgb, "Original")
+    show_image(rgb, "Original (RGB)", order="rgb")
 
     ch_stats = metrics.channel_stats(rgb)
     st.markdown("#### RGB channel statistics")
@@ -790,9 +819,9 @@ def page_t5() -> None:
         guidance = (
             f"Guidance for *this* image: the cast is dominated by {top_ch} (highest mean), so "
             f"eliminating **{top_ch}** is the most dramatic way to show how much of the picture's "
-            f"appearance that channel carries — the cast disappears and the remaining two "
-            f"channels take over. If instead a region looks "
-            f"detail-poor, check the dimmest channel ({bottom_ch}): hidden detail often lives in "
+            f"appearance that channel carries — the dominant tint is removed from the rendered "
+            f"image and the remaining two channels take over. If instead a region looks "
+            f"detail-poor, check the dimmest channel ({bottom_ch}): hidden detail *may* live in "
             f"the channel that is currently suppressed. You still choose the final channel below."
         )
     else:
@@ -814,7 +843,7 @@ def page_t5() -> None:
     st.markdown("#### Result — one channel zeroed")
     c1, c2 = st.columns(2)
     with c1:
-        show_image(rgb, "Original")
+        show_image(rgb, "Original (RGB)", order="rgb")
     with c2:
         st.image(out, caption=f"Result with {ch_name} channel = 0")
 
@@ -842,7 +871,7 @@ def page_t5() -> None:
     ])
 
     st.markdown("#### Download")
-    download_button(out, f"task5_{source_basename(source)}_{ch_name.lower()}_removed.png")
+    download_button(out, f"task5_{source_basename(source)}_{ch_name.lower()}_removed.png", order="rgb")
 
 
 # ---------------------------------------------------------------------------
@@ -1085,8 +1114,25 @@ def page_t7() -> None:
 # Task 8 — blur & sharpening
 # ---------------------------------------------------------------------------
 
-KERNEL_LAPLACIAN_STR = "[ 0  -1   0 ]\n[ -1   4  -1 ]\n[ 0  -1   0 ]   (Laplacian, 4-neighbour)"
-KERNEL_CUSTOM_STR = "[ 0  -1   0 ]\n[ -1   5  -1 ]   ← custom sharpening kernel (sum = 1)\n[ 0  -1   0 ]"
+KERNEL_LAPLACIAN_STR = (
+    "[ 0  -1   0 ]\n"
+    "[ -1   4  -1 ]   (4-neighbour Laplacian, +4 centre)\n"
+    "[ 0  -1   0 ]\n\n"
+    "response = I ⊗ L   (computed in float32, signed, no truncation)\n"
+    "out = I + α · response      # positive where a pixel is brighter than"
+    "                             # its neighbours -> bright features get brighter"
+)
+KERNEL_CUSTOM_STR = (
+    "base kernel  K_base = [ 0  -1   0 ]\n"
+    "                     [ -1   5  -1 ]\n"
+    "                     [ 0  -1   0 ]\n\n"
+    "effective kernel:  K(s) = δ + s · (K_base − δ)\n"
+    "(δ = unit impulse, the identity element of convolution; sum δ = 1)\n"
+    "sum(K(s)) = 1 for every s  ->  constant regions stay constant at any\n"
+    "strength; s = 0 leaves the image unchanged, only the high-pass part\n"
+    "is scaled with s.\n"
+    "out = blurred ⊗ K(s)   (float32, clipped to 0–255)"
+)
 
 
 def page_t8() -> None:
@@ -1110,23 +1156,26 @@ def page_t8() -> None:
     if method.startswith("Laplacian"):
         alpha = st.slider("Sharpening strength α (0 – 2)", 0.0, 2.0, 1.0, 0.1)
         sharpened = ops.sharpen_laplacian(blurred, alpha)
-        kernel_block = KERNEL_LAPLACIAN_STR + f"\n\nout = I - α·Laplacian(I),   α = {alpha}"
+        kernel_block = KERNEL_LAPLACIAN_STR + f"\n\nα = {alpha}"
         explainer = (
-            f"**Laplacian sharpening** with α = {alpha}: the 4-neighbour Laplacian is a "
-            "second-derivative (band-pass) operator; it is negative where a pixel is brighter "
-            "than its surroundings, so subtracting it from the image pushes those pixels even "
-            "brighter — edges and fine detail get stronger. α = 0 gives the unsharpened blurred "
-            "image; larger α increases edge emphasis (and ringing) at the cost of stability."
+            f"**Laplacian sharpening** with α = {alpha}: the +4-centre 4-neighbour Laplacian is "
+            "a second-derivative (band-pass) operator whose response is *positive* where a pixel "
+            "is brighter than its surroundings. The convolution is computed in float32 (signed, "
+            "so nothing is truncated), and α times that response is **added** to the image — "
+            "bright features get even brighter, so edges and fine detail are emphasized. "
+            "α = 0 returns the input unchanged; larger α increases edge emphasis (and ringing) "
+            "at the cost of stability."
         )
     elif method.startswith("Custom"):
-        intensity = st.slider("Kernel intensity (0.5 – 2)", 0.5, 2.0, 1.0, 0.1)
+        intensity = st.slider("Kernel strength s (0.5 – 2)", 0.5, 2.0, 1.0, 0.1)
         sharpened = ops.sharpen_custom_kernel(blurred, intensity)
-        kernel_block = KERNEL_CUSTOM_STR + f"\n\nout = blurred ⊗ (intensity · K),   intensity = {intensity}\n"
+        kernel_block = KERNEL_CUSTOM_STR + f"\n\ns = {intensity}\n"
         explainer = (
-            f"**Custom 3×3 kernel sharpening** with intensity {intensity}: the centre pixel is "
-            "weighted +5 (or 5·intensity) while the four neighbours are subtracted (−1 each). "
-            "The kernel sums to 1, so flat regions are unchanged and only local contrast around "
-            "edges increases. This is the classic handcrafted sharpening convolution."
+            f"**Custom 3×3 kernel sharpening** with strength {intensity}: the base kernel weights "
+            "the centre pixel +5 and subtracts the four neighbours (−1 each). The effective "
+            "kernel K(s) = δ + s·(K_base − δ) (δ = unit impulse) keeps its sum equal to 1 at "
+            "*any* strength, so flat regions are exactly unchanged (no DC gain shift) while only "
+            "the high-pass part — the local contrast around edges — grows with s."
         )
     else:
         amount = st.slider("Unsharp amount k (0.2 – 2)", 0.2, 2.0, 1.0, 0.1)
@@ -1181,7 +1230,17 @@ def page_t8() -> None:
 # Task 9 — edge detection
 # ---------------------------------------------------------------------------
 
-SOBEL_KX_STR = "Sobel x (horizontal gradient)      Sobel y (vertical gradient)\n\n  [ -2   0   2 ]                   [ -1  -2  -1 ]\n  [ -1   0   1 ]                   [  0   0   0 ]\n  [  2   0  -2 ]                   [  1   2   1 ]\n\n  gx = I ⊗ Kx      gy = I ⊗ Ky      magnitude = sqrt(gx² + gy²)"
+SOBEL_KX_STR = (
+    "Sobel X (horizontal gradient)     Sobel Y (vertical gradient)\n\n"
+    "  [ -1   0   1 ]                 [ -1  -2  -1 ]\n"
+    "  [ -2   0   2 ]                 [  0   0   0 ]\n"
+    "  [ -1   0   1 ]                 [  1   2   1 ]\n\n"
+    "  gx = I ⊗ Kx      gy = I ⊗ Ky      magnitude = sqrt(gx² + gy²)\n\n"
+    "(The standard 3×3 Sobel kernels as implemented by cv2.Sobel. OpenCV's\n"
+    " row-first coordinate convention may flip the sign of gx compared with\n"
+    " the textbook ∂I/∂x — the magnitude, which is what is displayed, is\n"
+    " unaffected by that sign.)"
+)
 CANNY_STEPS_STR = ("Canny — 5 stages:\n"
                    "1) Gaussian smoothing (remove noise)\n"
                    "2) gradient magnitude + direction (like Sobel)\n"

@@ -240,20 +240,26 @@ def make_low_contrast(img: np.ndarray, band: tuple[int, int] = (105, 165)) -> np
 def add_salt_and_pepper(img: np.ndarray, ratio: float, seed: int = 42) -> np.ndarray:
     """Inject salt-and-pepper noise with NumPy (reproducible via `seed`).
 
-    `ratio` is the fraction of corrupted pixels (0..1). Half of them are
-    forced to white (salt), half to black (pepper). The whole pixel value
-    is replaced on every channel, as in a classic impulse-noise model.
+    `ratio` is the fraction of corrupted *pixels* (0..1). Exactly
+    round(ratio * H * W) unique pixel locations are sampled and the
+    WHOLE pixel is replaced on every channel: sampled pixels become
+    either pure white (salt) or pure black (pepper). Corrupted locations
+    therefore contain only full-black or full-white pixels, never a mix
+    of channel values. Works for 2-D gray and (H, W, 3) color images.
     """
     ratio = float(np.clip(ratio, 0.0, 1.0))
     rng = np.random.default_rng(seed)
-    out = img.astype(np.float32)
-    n = int(round(ratio * out.size))
+    h, w = img.shape[:2]
+    n = int(round(ratio * h * w))
+    out = img.copy()
     if n > 0:
-        idx = rng.choice(out.size, size=n, replace=False)
-        half = n // 2
-        out.flat[idx[:half]] = 255.0
-        out.flat[idx[half:]] = 0.0
-    return out.astype(np.uint8)
+        n = min(n, h * w)
+        idx = rng.choice(h * w, size=n, replace=False)  # unique pixel locations
+        ys, xs = np.unravel_index(idx, (h, w))
+        salt = rng.random(n) < 0.5
+        out[ys[salt], xs[salt]] = 255  # broadcast to all channels
+        out[ys[~salt], xs[~salt]] = 0
+    return out
 
 
 def add_gaussian_noise(img: np.ndarray, sigma: float, seed: int = 42) -> np.ndarray:
@@ -311,37 +317,58 @@ def gaussian_blur(img: np.ndarray, ksize: int = 7) -> np.ndarray:
 SHARPEN_LAPLACIAN_KERNEL = np.array(
     [[0, -1, 0], [-1, 4, -1], [0, -1, 0]], dtype=np.float32
 )
-"""4-neighbour Laplacian. Convolution gives the second derivative, which
-is negative at edges; subtracting it from the image reinforces edges."""
+"""4-neighbour Laplacian with the +4 centre convention. Its convolution is
+POSITIVE where a pixel is brighter than its 4 neighbours, negative where
+it is darker, and zero on flat areas. Sharpening therefore ADDS a scaled
+response: out = I + alpha * (I * L)."""
 
 SHARPEN_CUSTOM_KERNEL = np.array(
     [[0, -1, 0], [-1, 5, -1], [0, -1, 0]], dtype=np.float32
 )
-"""Classic 3x3 sharpening kernel (kernel sum = 1, flat areas unchanged)."""
+"""Classic 3x3 sharpening base kernel (sum = 1). At strength s the app
+uses K(s) = delta + s * (K_base - delta), where delta is the unit
+impulse (the identity element of convolution, sum 1). Then
+sum(K(s)) = 1 for EVERY s, so constant regions stay constant at any
+strength: s = 0 is the identity (no change), s = 1 is the base kernel,
+s > 1 over-sharpens."""
+
+# Identity element of convolution: the unit impulse (delta), sum = 1.
+DELTA_3X3 = np.zeros((3, 3), dtype=np.float32)
+DELTA_3X3[1, 1] = 1.0
 
 
 def sharpen_laplacian(img: np.ndarray, alpha: float = 1.0) -> np.ndarray:
-    """Laplacian sharpening: out = I - alpha * Laplacian(I).
+    """Laplacian sharpening: out = I + alpha * (I * L).
 
-    The Laplacian is a band-pass (second derivative) operator; it is
-    negative in regions where the pixel is brighter than its neighbours,
-    so subtracting it pushes those regions brighter - edges get stronger.
+    L is the +4-centre 4-neighbour Laplacian. The convolution is computed
+    in float32 (ddepth=cv2.CV_32F) so the signed response is kept intact
+    (a uint8 convolution would truncate it), and the result is clipped to
+    [0, 255]. Because the response is positive where a pixel is brighter
+    than its neighbours, ADDING it makes bright features brighter.
+    alpha = 0 returns the input unchanged (exact uint8 equality).
     """
-    lap = cv2.filter2D(img, -1, SHARPEN_LAPLACIAN_KERNEL)
-    out = img.astype(np.float32) - float(alpha) * lap
+    lap = cv2.filter2D(img, cv2.CV_32F, SHARPEN_LAPLACIAN_KERNEL)
+    out = img.astype(np.float32) + float(alpha) * lap
     return np.clip(out, 0.0, 255.0).astype(np.uint8)
 
 
 def sharpen_custom_kernel(img: np.ndarray, intensity: float = 1.0) -> np.ndarray:
-    """Sharpen with the custom 3x3 kernel [[0,-1,0],[-1,5,-1],[0,-1,0]].
+    """Sharpen with the custom 3x3 kernel, keeping the DC gain fixed at 1.
 
-    The kernel is multiplied by `intensity` before convolution. The
-    kernel values are fixed and safe (sum = 1, no division involved), so
-    the output stays in a well-behaved numeric range and is clipped to
-    [0, 255].
+    Instead of multiplying the whole base kernel by `intensity` (which
+    would scale flat areas by `intensity` and change overall brightness),
+    the effective kernel is formed as
+
+        K(s) = delta + s * (K_base - delta)
+
+    where delta is the unit impulse. Since both delta and K_base have
+    sum 1, sum(K(s)) = 1 for ANY s: constant regions stay exactly
+    constant, and only the high-pass part is scaled. The convolution is
+    computed in float32 and the result is clipped to [0, 255].
     """
-    k = SHARPEN_CUSTOM_KERNEL * float(intensity)
-    out = cv2.filter2D(img, -1, k)
+    s = float(intensity)
+    k = DELTA_3X3 + s * (SHARPEN_CUSTOM_KERNEL - DELTA_3X3)
+    out = cv2.filter2D(img, cv2.CV_32F, k)
     return np.clip(out, 0.0, 255.0).astype(np.uint8)
 
 

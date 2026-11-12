@@ -217,6 +217,41 @@ def test_salt_pepper_zero_ratio_is_identity():
     assert np.array_equal(ops.add_salt_and_pepper(base, 0.0, seed=1), base)
 
 
+# ---------------------------------------------------------------------------
+# REGRESSION (audit issue 4): S&P corrupts whole PIXELS, not channel elements
+# ---------------------------------------------------------------------------
+
+def test_salt_pepper_corrupts_exactly_ratio_fraction_of_pixels_color():
+    base = np.full((100, 100, 3), 128, dtype=np.uint8)
+    out = ops.add_salt_and_pepper(base, 0.10, seed=11)
+    diff = out.astype(np.int16) != 128
+    pixel_mask = diff.any(axis=2)
+    # exactly round(0.10 * 100 * 100) = 1000 corrupted PIXELS (not ~2700 elements)
+    assert int(pixel_mask.sum()) == 1000
+    ys, xs = np.where(pixel_mask)
+    values = out[ys, xs]
+    # every corrupted pixel is full black or full white on ALL channels
+    assert ((values == 0).all(axis=1) | (values == 255).all(axis=1)).all()
+    # uncorrupted pixels are untouched
+    assert (out[~pixel_mask] == 128).all()
+
+
+def test_salt_pepper_grayscale_whole_pixels():
+    base = np.full((10, 10), 128, dtype=np.uint8)
+    out = ops.add_salt_and_pepper(base, 0.20, seed=5)
+    corrupted = out != 128
+    assert int(corrupted.sum()) == 20  # round(0.20 * 100) pixels
+    assert set(np.unique(out)).issubset({0, 128, 255})
+
+
+def test_salt_pepper_ratio_uses_h_w_not_flattened_channels():
+    """10x10x3 with ratio 0.5 must corrupt 50 pixels (150 channel
+    elements), i.e. the count is based on H*W."""
+    base = np.full((10, 10, 3), 128, dtype=np.uint8)
+    out = ops.add_salt_and_pepper(base, 0.5, seed=2)
+    assert int((out.astype(np.int16) != 128).any(axis=2).sum()) == 50
+
+
 def test_gaussian_noise_std_and_determinism():
     base = flat(60, 60, 128)
     out1 = ops.add_gaussian_noise(base, 20, seed=3)
@@ -267,6 +302,74 @@ def test_sharpen_flat_image_is_unchanged():
     assert (ops.sharpen_laplacian(img, 1.0) == 128).all()
     assert (ops.sharpen_custom_kernel(img, 1.0) == 128).all()
     assert (ops.unsharp_mask(img, 1.0, 5) == 128).all()  # kernel sums to 1
+
+
+# ---------------------------------------------------------------------------
+# REGRESSION (audit issue 1): Laplacian sharpening sign / depth
+# ---------------------------------------------------------------------------
+
+def test_laplacian_sharpen_bright_feature_is_not_erased():
+    """Black 5x5 image with a bright centre pixel: with the +4-centre
+    Laplacian the response at the centre is +4*100, so out = I + 1*L must
+    give a centre >= 100 (it saturates to 255). The old code (uint8
+    convolution + subtraction) produced 0 here, erasing the feature."""
+    img = np.zeros((5, 5), dtype=np.uint8)
+    img[2, 2] = 100
+    out = ops.sharpen_laplacian(img, 1.0)
+    assert int(out[2, 2]) >= 100
+
+
+def test_laplacian_sharpen_alpha_zero_is_exact_identity():
+    img = flat(5, 5, 100)
+    img[2, 2] = 10
+    assert np.array_equal(ops.sharpen_laplacian(img, 0.0), img)
+
+
+def test_laplacian_sharpen_dark_feature_gets_darker():
+    """Mirror case: a dark pixel on a bright background must get darker
+    (the signed float response is negative there), proving the sign is
+    correct in both directions."""
+    img = np.full((5, 5), 200, dtype=np.uint8)
+    img[2, 2] = 100
+    out = ops.sharpen_laplacian(img, 1.0)
+    assert int(out[2, 2]) < 100
+
+
+# ---------------------------------------------------------------------------
+# REGRESSION (audit issue 7): custom kernel DC gain
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("s", [0.5, 1.0, 1.5])
+def test_custom_kernel_flat_constant_stays_constant_at_any_strength(s):
+    """K(s) = I3 + s*(K_base - I3) has sum 1 for every s, so a flat
+    constant image must be reproduced EXACTLY (uint8 equality)."""
+    img = flat(10, 10, 100)
+    assert (ops.sharpen_custom_kernel(img, s) == 100).all()
+
+
+def test_custom_kernel_strength_changes_only_high_pass():
+    """On a flat-100 image with one bright pixel, strength 1.5 must
+    sharpen (centre >= strength 0.5's centre) while flat neighbours
+    remain 100 (no DC gain at any strength)."""
+    img = np.full((10, 10), 100, dtype=np.uint8)
+    img[5, 5] = 200
+    out_half = ops.sharpen_custom_kernel(img, 0.5)
+    out_full = ops.sharpen_custom_kernel(img, 1.5)
+    # Flat corner region must be untouched at both strengths
+    assert (out_half[:2, :2] == 100).all() and (out_full[:2, :2] == 100).all()
+    # Stronger strength -> stronger emphasis of the bright centre
+    assert int(out_full[5, 5]) >= int(out_half[5, 5]) > 100
+
+
+def test_custom_kernel_effective_kernel_sum_is_one():
+    """Rebuild the documented K(s) = delta + s*(K_base - delta) directly
+    (delta = unit impulse, sum 1) and check the DC property sum = 1."""
+    for s in (0.3, 1.0, 2.0):
+        k = ops.DELTA_3X3 + s * (ops.SHARPEN_CUSTOM_KERNEL - ops.DELTA_3X3)
+        assert abs(float(k.sum()) - 1.0) < 1e-6
+    # s = 1 reproduces the base kernel exactly
+    k1 = ops.DELTA_3X3 + 1.0 * (ops.SHARPEN_CUSTOM_KERNEL - ops.DELTA_3X3)
+    assert np.array_equal(k1, ops.SHARPEN_CUSTOM_KERNEL)
 
 
 def test_sharpen_outputs_valid_uint8():

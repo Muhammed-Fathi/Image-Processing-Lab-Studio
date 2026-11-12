@@ -21,15 +21,27 @@ def test_snr_zero_noise_is_infinite():
     assert metrics.snr_db(s, s.copy()) == float("inf")
 
 
-def test_snr_zero_signal_returns_zero():
+def test_snr_zero_signal_nonzero_noise_is_minus_infinity():
+    """REGRESSION (audit issue 8): a zero-energy signal with non-zero
+    error has ratio 0 -> 10*log10(0) = -infinity. We must report -inf,
+    never a fake 0 dB."""
     s = np.zeros(4)
     x = np.zeros(4) + 1
-    assert metrics.snr_db(s, x) == 0.0
+    assert metrics.snr_db(s, x) == float("-inf")
 
 
 def test_snr_shape_mismatch_raises():
     with pytest.raises(ValueError):
         metrics.snr_db(np.ones(4), np.ones(9))
+
+
+def test_snr_rejects_same_size_different_shape():
+    """REGRESSION (audit issue 8): shapes are checked BEFORE flattening,
+    so same-size transposes or flat-vs-2-D arrays must be rejected."""
+    with pytest.raises(ValueError):
+        metrics.snr_db(np.ones((2, 3)), np.ones((3, 2)))
+    with pytest.raises(ValueError):
+        metrics.snr_db(np.ones(6), np.ones((2, 3)))
 
 
 def test_snr_uses_power_not_psnr():

@@ -197,7 +197,12 @@ no third-party photography, no licenses to track, and no runtime downloads.
 - **Histogram stretching:** `out = (I − I_min) · 255 / (I_max − I_min)` (skipped if range = 0)
 - **Histogram equalization:** `out(v) = round(255 · (CDF(v) − CDF_min) / (N − CDF_min))`
 - **Gaussian blur / sharpening kernels:**
-  Laplacian `[[0,−1,0],[−1,4,−1],[0,−1,0]]`, custom `[[0,−1,0],[−1,5,−1],[0,−1,0]]`,
+  Laplacian `L = [[0,−1,0],[−1,4,−1],[0,−1,0]]` (computed in float32, then
+  `out = I + α·(I ⊗ L)` — the signed response is *added*, positive where a pixel
+  is brighter than its neighbours);
+  custom `K_base = [[0,−1,0],[−1,5,−1],[0,−1,0]]` with effective kernel
+  `K(s) = δ + s·(K_base − δ)` (δ = unit impulse, so `sum K(s) = 1` at any
+  strength and flat regions stay constant);
   unsharp mask `out = I + k·(I − blurred(I))`
 - **Sobel magnitude:** `√(gx² + gy²)` with `gx = I ⊗ Kx`, `gy = I ⊗ Ky`
 
@@ -214,6 +219,8 @@ SNR (dB)     = 10 · log10( Signal power / Noise power )
 
 - No library PSNR/SNR function is used; the app shows the two powers and the result.
 - If `X == S` exactly, the noise power is zero and the SNR is reported as **∞**.
+- If the signal has zero energy but the error is non-zero, the ratio is 0 and
+  `10·log10(0) = −∞`, so the SNR is reported as **−∞** (deliberately not a fake 0 dB).
 - This is a **power-ratio SNR, not PSNR**: PSNR would use the MSE and reference 255².
   The two quantities are different and must not be conflated in the discussion.
 - A higher SNR (under this definition) means less error relative to the reference signal.
@@ -221,7 +228,8 @@ SNR (dB)     = 10 · log10( Signal power / Noise power )
 ## 12. Image input requirements
 
 - Formats: PNG, JPG/JPEG, BMP, TIFF, WebP.
-- 8-bit images; grayscale (1-channel) or color (3-channel; RGBA is converted).
+- 8-bit images; grayscale (1-channel) or color (3-channel; 4-channel BGRA is
+  converted to BGR, dropping the alpha channel).
 - Grayscale uploads are promoted to 3 channels where a color image is required (the app
   tells you when this happens).
 - Unreadable or corrupt files are rejected with a clear error message — the app never
@@ -241,8 +249,9 @@ SNR (dB)     = 10 · log10( Signal power / Noise power )
 - **Stretching** linearly remaps the observed intensity range to 0–255; **equalization**
   redistributes values via the histogram's CDF. Color images are processed on the Y
   (luminance) channel of YCrCb to preserve hue.
-- **Median filtering** rejects impulse outliers (salt & pepper); **Gaussian/mean
-  smoothing** averages out additive noise.
+- **Salt-and-pepper noise** replaces whole pixels — all channels at once — with pure
+  black or white (seeded, reproducible); **median filtering** rejects such impulse
+  outliers; **Gaussian/mean smoothing** averages out additive Gaussian noise.
 - **Sharpening** re-emphasizes high frequencies (second derivative or high-pass detail);
   it cannot recover frequencies removed by the blur.
 - **Sobel** measures gradient strength; **Canny** is a 5-stage detector producing thin,
@@ -251,7 +260,8 @@ SNR (dB)     = 10 · log10( Signal power / Noise power )
 ## 14. Example demonstrations (ready-made for the oral exam)
 
 1. *Task 3:* open with the bundled **dark scene** → the exposure banner reports "dark"
-   → choose **Addition** → show mean rising and shadows recovering.
+   → choose **Addition** → show the mean rising and the surviving shadow content
+   becoming visible (values clipped to 0 at capture stay lost — say so).
 2. *Task 6:* open with the bundled **low-contrast scene** → narrow histogram → choose
    **Stretching** → the histogram spreads to the full range; switch to **Equalization**
    and compare the histograms and statistics.
