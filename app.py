@@ -175,7 +175,7 @@ def show_image(img: np.ndarray, caption: str | None = None, order: str = "bgr") 
         st.image(ops.bgr_to_rgb(img), caption=caption)
 
 
-def download_button(img: np.ndarray, name: str, order: str = "bgr") -> None:
+def download_button(img: np.ndarray, name: str, order: str = "bgr", label: str = "Download PNG") -> None:
     """Offer a PNG download.
 
     cv2.imencode assumes the array is in BGR order, so RGB arrays are
@@ -184,7 +184,7 @@ def download_button(img: np.ndarray, name: str, order: str = "bgr") -> None:
     """
     arr = img if order == "bgr" else cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     st.download_button(
-        "Download PNG",
+        label,
         iu.encode_png(arr),
         file_name=name,
         mime="image/png",
@@ -234,18 +234,29 @@ def histogram_figure(gray_images: dict[str, np.ndarray], title: str = "Histogram
     return fig
 
 
-def matrix_excerpt_table(rgb: np.ndarray, size: int = 5) -> None:
-    """Show a small (size x size) RGB matrix excerpt around the image center."""
-    h, w = rgb.shape[:2]
-    y0 = max(0, h // 2 - size // 2)
-    x0 = max(0, w // 2 - size // 2)
-    rows = []
-    for y in range(y0, min(h, y0 + size)):
-        for x in range(x0, min(w, x0 + size)):
-            r, g, b = (int(v) for v in rgb[y, x])
-            rows.append({"Pixel (row, col)": f"({y}, {x})", "R": r, "G": g, "B": b})
-    st.table(rows)
+def matrix_excerpt_table(rgb: np.ndarray, size: int = 5,
+                         center: tuple[int, int] | None = None) -> None:
+    """Display an actual size-by-size matrix of RGB tuples, with one row per image row.
 
+    Center is a (row, column) pair. Unlike a 25-row pixel list, this reflects
+    the two-dimensional spatial structure of the sampled image region.
+    """
+    h, w = rgb.shape[:2]
+    if center is None:
+        center = (h // 2, w // 2)
+    cy, cx = center
+    y0 = min(max(0, cy - size // 2), max(0, h - size))
+    x0 = min(max(0, cx - size // 2), max(0, w - size))
+    xs = list(range(x0, min(w, x0 + size)))
+    ys = list(range(y0, min(h, y0 + size)))
+    rows = []
+    for y in ys:
+        row = {"Row / Col": str(y)}
+        for x in xs:
+            r, g, b = (int(value) for value in rgb[y, x])
+            row[str(x)] = f"({r}, {g}, {b})"
+        rows.append(row)
+    st.table(rows)
 
 def luminance(img: np.ndarray) -> np.ndarray:
     """Grayscale (or Y-channel) version used for histogram display."""
@@ -372,102 +383,144 @@ def page_dashboard() -> None:
 def page_t1() -> None:
     st.markdown('<div class="task-eyebrow">LAB 01 / TASK 01</div>', unsafe_allow_html=True)
     st.title("RGB Channel Separation")
-    st.caption("Lab 1 — Image Fundamentals · Extract and inspect the Red, Green and Blue channels of a color image.")
+    st.caption(
+        "Separate the red, green, and blue channels with OpenCV and "
+        "inspect their intensity, color contribution, and pixel values."
+    )
 
     img, source = image_source("color_scene.png")
     rgb = ops.bgr_to_rgb(img)
-    r, g, b = ops.separate_channels(rgb)
+    red, green, blue = ops.separate_channels(rgb)
+    h, w = rgb.shape[:2]
 
-    st.markdown("#### Channel order: BGR in OpenCV vs. RGB for display")
-    st.markdown(
-        "OpenCV loads color images in **BGR** order. If a BGR array is shown as if it were RGB, "
-        "the **red and blue channels appear swapped**. The left image below is the raw OpenCV "
-        "array mis-displayed; the right image is the correctly converted RGB version."
-    )
-    c1, c2 = st.columns(2)
-    with c1:
-        # Show the BGR array *as if* it were RGB: the classic red/blue swap demo.
-        st.image(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR),
-                 caption="Raw OpenCV BGR array displayed without conversion (red/blue look swapped)")
-    with c2:
-        st.image(rgb, caption="Correctly converted: `cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)`")
+    # A compact overview makes the output accessible without scrolling past
+    # two large copies of the same image.
+    st.markdown("### Original image")
+    left, right = st.columns([1.55, 1], gap="large")
+    with left:
+        show_image(rgb, "Original image — correct RGB color order", order="rgb")
+    with right:
+        st.markdown("**Method overview**")
+        st.markdown(
+            "OpenCV reads color images as **BGR**. Convert to **RGB** before "
+            "interpreting individual red, green and blue channels."
+        )
+        st.code(
+            "rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)\n"
+            "red, green, blue = cv2.split(rgb)",
+            language="python",
+        )
+        st.metric("Resolution", f"{w} × {h}")
+        st.caption("Each channel has 8-bit intensity values from 0 to 255.")
 
-    st.markdown("#### 1 · Original image (RGB)")
-    show_image(rgb, "Original (correct color order)", order="rgb")
+    # BGR/RGB is useful for an oral exam, but shouldn't dominate the page.
+    with st.expander("Why does BGR versus RGB matter? See the comparison"):
+        st.markdown(
+            "OpenCV's **BGR** channel order differs from the **RGB** order "
+            "used for display. Treating BGR as RGB swaps the red and blue appearance."
+        )
+        before, after = st.columns(2)
+        with before:
+            st.image(
+                img,
+                caption="Incorrect: raw BGR interpreted as RGB (red and blue swapped)",
+            )
+        with after:
+            st.image(
+                rgb,
+                caption="Correct: BGR converted to RGB before display",
+            )
 
+    st.markdown("### Explore the channels")
     tab_map, tab_iso, tab_px, tab_mx = st.tabs(
-        ["2 · Channel intensity maps", "3 · Color-isolated images", "4 · Pixel inspector", "5 · RGB matrix excerpt"]
+        ["Intensity maps", "Color isolation", "Pixel inspector", "RGB matrix (5×5)"]
     )
     with tab_map:
-        st.markdown("Each channel shown as a grayscale **intensity map**: bright = that primary is strong there.")
-        ch = st.columns(3)
-        for col, arr, name in zip(ch, (r, g, b), ("Red", "Green", "Blue")):
+        st.caption(
+            "Brightness in each grayscale map represents the intensity "
+            "of that channel at every pixel."
+        )
+        cols = st.columns(3)
+        for col, values, name in zip(
+            cols, (red, green, blue), ("Red", "Green", "Blue")
+        ):
             with col:
-                st.image(arr, channels="grayscale", caption=f"{name} channel — intensity only")
+                st.image(values, channels="grayscale", caption=f"{name} intensity")
+
     with tab_iso:
-        st.markdown("Color-isolated images: only the corresponding channel is preserved, the other two are set to 0.")
-        ch = st.columns(3)
-        for col, i, name in zip(ch, (0, 1, 2), ("Only Red", "Only Green", "Only Blue")):
+        st.caption(
+            "Each image preserves one color channel and sets the other two to zero."
+        )
+        cols = st.columns(3)
+        base = source_basename(source)
+        for col, index, channel_name, image_channel in zip(
+            cols,
+            (0, 1, 2),
+            ("Red", "Green", "Blue"),
+            ("red", "green", "blue"),
+        ):
             with col:
-                iso = ops.isolate_channel(rgb, i)
-                st.image(iso, caption=name)
+                isolated = ops.isolate_channel(rgb, index)
+                st.image(isolated, caption=f"{channel_name} channel only")
+                download_button(
+                    isolated,
+                    f"task1_{base}_{image_channel}_only.png",
+                    order="rgb",
+                    label=f"Download {channel_name}",
+                )
+
     with tab_px:
-        st.markdown("Inspect the exact stored values of any pixel.")
-        h, w = rgb.shape[:2]
-        c1, c2, c3 = st.columns([1, 1, 2])
-        with c1:
-            px = st.slider("Column x", 0, max(0, w - 1), min(50, max(0, w - 1)))
-        with c2:
-            py = st.slider("Row y", 0, max(0, h - 1), min(50, max(0, h - 1)))
-        r_v, g_v, b_v = (int(v) for v in rgb[py, px])
-        with c3:
-            m1, m2, m3 = st.columns(3)
-            m1.metric("R", r_v)
-            m2.metric("G", g_v)
-            m3.metric("B", b_v)
+        st.caption("Choose pixel coordinates to inspect the original RGB values.")
+        controls, preview = st.columns([1, 1.35], gap="large")
+        with controls:
+            px = st.slider("Column x", 0, max(0, w - 1), min(50, w - 1))
+            py = st.slider("Row y", 0, max(0, h - 1), min(50, h - 1))
+            r_v, g_v, b_v = (int(v) for v in rgb[py, px])
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Red", r_v)
+            c2.metric("Green", g_v)
+            c3.metric("Blue", b_v)
+            st.caption(f"Selected pixel: row {py}, column {px}")
+        with preview:
             marked = rgb.copy()
             cv2.circle(marked, (px, py), 4, (255, 0, 0), 2)
-            st.image(marked, caption=f"Selected pixel at (row {py}, col {px})")
+            st.image(marked, caption="Pixel location in the original image")
+
     with tab_mx:
-        st.markdown("The image *is* a matrix of (R, G, B) triplets. A 5×5 excerpt around the center:")
-        matrix_excerpt_table(rgb, size=5)
+        st.caption(
+            "This is a 5×5 spatial matrix of (R, G, B) pixel triplets. "
+            "Move the coordinates toward an object boundary to see how values change."
+        )
+        cy_col, cx_col = st.columns(2)
+        with cy_col:
+            matrix_y = st.slider("Matrix center — row", 0, max(0, h - 1), h // 2)
+        with cx_col:
+            matrix_x = st.slider("Matrix center — column", 0, max(0, w - 1), w // 2)
+        matrix_excerpt_table(rgb, size=5, center=(matrix_y, matrix_x))
 
-    formula_box(
-        "Pixel = (R, G, B) with R, G, B in [0, 255]\n"
-        "OpenCV stores (B, G, R)  ->  rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)\n"
-        "r, g, b = cv2.split(rgb)            # three single-channel arrays\n"
-        "isolate(i) = merge(ch0 if i==0 else 0, ch1 if i==1 else 0, ch2 if i==2 else 0)",
-        "Formula / operations used",
-    )
+    with st.expander("Understanding the result and mathematical operations"):
+        st.markdown(
+            "**RGB representation:** each pixel contains three channel values "
+            "between 0 and 255. Grayscale channel intensity maps show the strength "
+            "of each primary color. Color-isolated images instead keep the actual "
+            "primary in the rendered output."
+        )
+        st.code(
+            "Pixel = (R, G, B), each component in [0, 255]\n"
+            "rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)\n"
+            "R, G, B = cv2.split(rgb)\n"
+            "isolate(red) = (R, 0, 0)\n"
+            "isolate(green) = (0, G, 0)\n"
+            "isolate(blue) = (0, 0, B)",
+            language="python",
+        )
 
-    st.markdown(
-        f"""
-**What is the RGB representation?** Every color pixel is stored as three intensity
-values — Red, Green and Blue — each 0 (off) to 255 (full). The perceived color is the
-mix of the three; for example `{r_v}, {g_v}, {b_v}` at the selected pixel. Separating the
-channels shows each primary's *contribution* to the scene: the red channel is bright where
-the image contains red, and dark where it does not, and so on for green and blue.
-**Why this technique?** Channel separation is the most basic way to inspect what an image
-is made of; it is also the prerequisite for every channel-based operation in the other tasks.
-"""
-    )
     discussion([
-        "OpenCV uses BGR; always convert before display or analysis that assumes RGB order.",
-        "A channel intensity map is grayscale: bright = that primary is strong in that region.",
-        "Color isolation (keeping one channel, zeroing the others) shows what the scene looks like under that single primary color.",
-        "Limitation: the channel split is exact and lossless — no information is created or destroyed; it only re-presents the same data.",
+        "OpenCV typically reads color images in BGR; convert to RGB before interpreting channels.",
+        "An intensity map uses grayscale brightness to reveal the contribution of one color channel.",
+        "A color-isolated image retains exactly one channel while setting the others to zero.",
+        "The RGB split is reversible when all three channels are kept; no color information is lost by splitting alone.",
     ])
-
-    st.markdown("#### Download")
-    base = source_basename(source)
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        download_button(ops.isolate_channel(rgb, 0), f"task1_{base}_red_only.png", order="rgb")
-    with c2:
-        download_button(ops.isolate_channel(rgb, 1), f"task1_{base}_green_only.png", order="rgb")
-    with c3:
-        download_button(ops.isolate_channel(rgb, 2), f"task1_{base}_blue_only.png", order="rgb")
-
 
 # ---------------------------------------------------------------------------
 # Task 2 — custom weighted grayscale
