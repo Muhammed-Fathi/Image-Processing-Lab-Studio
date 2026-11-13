@@ -117,23 +117,54 @@ def test_dashboard_quick_navigation_switches_task():
 # ---------------------------------------------------------------------------
 
 def test_task4_solarization_percentage_matches_channel_mask():
+    """Use the actual image and threshold selected in Streamlit.
+
+    The app may default to the final sunset photograph or to the original
+    synthetic fallback. The regression must work for both.
+    """
     import numpy as np
     from streamlit.testing.v1 import AppTest
-
-    img = iu.load_image_from_path(iu.sample_path("midtone_gradient.png"))
-    threshold = 127  # the solarization slider default
-    expected_pct = float(np.mean(np.asarray(img, dtype=np.uint8) >= threshold)) * 100
-    expected_text = f"{expected_pct:.1f}%"
 
     at = AppTest.from_file(APP_PATH, default_timeout=60)
     at.session_state["nav"] = dict(app_module().NAV)["t4"]
     at.run()
-    # switch the technique radio to Solarization and re-run
-    at.main.radio[0].set_value("Solarization (partial inversion)")
+
+    technique = next(r for r in at.main.radio if r.label == "Technique")
+    if technique.value != "Solarization (partial inversion)":
+        technique.set_value("Solarization (partial inversion)")
+        at.run()
+    assert not at.exception
+
+    selected_photo = next(
+        item.value for item in at.main.selectbox
+        if item.label == "Demonstration image"
+    )
+    img = iu.load_image_from_path(iu.sample_path(selected_photo))
+    assert img is not None
+
+    def assert_percentage_matches():
+        threshold_slider = next(
+            slider for slider in at.main.slider
+            if slider.label.startswith("Solarization threshold T")
+        )
+        threshold = threshold_slider.value
+        expected_pct = float(
+            np.mean(np.asarray(img, dtype=np.uint8) >= threshold)
+        ) * 100
+        expected_text = f"{expected_pct:.1f}%"
+        assert any(
+            expected_text in (md.value or "") for md in at.main.markdown
+        ), (
+            f"Task 4 must report {expected_text} for "
+            f"{selected_photo} at threshold {threshold}"
+        )
+        return threshold_slider
+
+    slider = assert_percentage_matches()
+    slider.set_value(200)
     at.run()
     assert not at.exception
-    found = any(expected_text in (md.value or "") for md in at.main.markdown)
-    assert found, f"Task 4 does not show the per-channel mask percentage {expected_text}"
+    assert_percentage_matches()
 
 
 # ---------------------------------------------------------------------------
