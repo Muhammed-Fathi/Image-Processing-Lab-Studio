@@ -1,4 +1,4 @@
-"""Prepare the six approved source photos and the derived low-contrast input.
+r"""Prepare the six approved source photos and the derived low-contrast input.
 
 Usage (from repository root):
     python scripts/prepare_final_assets.py --download
