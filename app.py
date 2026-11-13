@@ -159,6 +159,12 @@ def image_source(default_sample: str, color_preferred: bool = True):
     return img, f"Sample: {choice}"
 
 
+def preferred_sample(approved: str, synthetic_fallback: str) -> str:
+    """Choose the approved final photograph when installed; keep the offline
+    synthetic samples as a reliable fallback before asset preparation."""
+    return approved if approved in iu.list_samples() else synthetic_fallback
+
+
 def source_basename(source_label: str) -> str:
     """Short file name from a source label, for download file names."""
     name = source_label.split(": ", 1)[-1]
@@ -393,7 +399,7 @@ def page_t1() -> None:
         "inspect their intensity, color contribution, and pixel values."
     )
 
-    img, source = image_source("color_scene.png")
+    img, source = image_source(preferred_sample("poppies_rgb_grayscale.jpg", "color_scene.png"))
     rgb = ops.bgr_to_rgb(img)
     red, green, blue = ops.separate_channels(rgb)
     h, w = rgb.shape[:2]
@@ -536,7 +542,7 @@ def page_t2() -> None:
     st.title("Custom Grayscale Conversion")
     st.caption("Lab 1 — Image Fundamentals · Grayscale via the weighted luminance formula, implemented manually (no average, no cv2 conversion).")
 
-    img, source = image_source("color_scene.png")
+    img, source = image_source(preferred_sample("poppies_rgb_grayscale.jpg", "color_scene.png"))
     rgb = ops.bgr_to_rgb(img)
     gray_custom = ops.weighted_grayscale(rgb)
     gray_cv = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)  # reference for comparison only
@@ -658,7 +664,7 @@ def page_t3() -> None:
     st.title("Arithmetic Image Enhancement")
     st.caption("Lab 2 — Pixel & Intensity Operations · Choose the arithmetic operation that fits the image's visual problem.")
 
-    img, source = image_source("dark_scene.png")
+    img, source = image_source(preferred_sample("dark_floral_tones.jpg", "dark_scene.png"))
     stats_in = metrics.intensity_stats(img)
     label, advice = exposure_guidance(stats_in)
     st.info(advice)
@@ -666,6 +672,7 @@ def page_t3() -> None:
     c1, c2 = st.columns([1, 2])
     with c1:
         op = st.selectbox("Arithmetic operation", list(OP_INFO.keys()),
+                          index=2 if "dark_floral_tones.jpg" in iu.list_samples() else 0,
                           format_func=lambda k: OP_INFO[k][0])
     with c2:
         if op == "add":
@@ -673,7 +680,7 @@ def page_t3() -> None:
         elif op == "sub":
             c_val = st.slider("Constant C  (negative C brightens)", -128, 128, 30)
         elif op == "mul":
-            c_val = st.slider("Multiplier C  (C<1 darkens, C>1 brightens)", 0.0, 3.0, 1.5, 0.05)
+            c_val = st.slider("Multiplier C  (C<1 darkens, C>1 brightens)", 0.0, 3.0, 1.8, 0.05)
         else:
             c_val = st.slider("Divisor C  (C>1 darkens, 0<C<1 brightens)", 0.1, 5.0, 1.5, 0.05)
 
@@ -758,17 +765,18 @@ def page_t4() -> None:
     st.title("Complement (Negative) & Solarization")
     st.caption("Lab 2 — Pixel & Intensity Operations · Full tonal inversion vs. threshold-controlled partial inversion.")
 
-    img, source = image_source("midtone_gradient.png")
+    img, source = image_source(preferred_sample("sunset_solarization.jpg", "midtone_gradient.png"))
     stats = metrics.intensity_stats(img)
 
     mode = st.radio(
         "Technique",
         ["Negative (complement)", "Solarization (partial inversion)"],
+        index=1 if "sunset_solarization.jpg" in iu.list_samples() else 0,
         horizontal=True,
     )
     threshold = 127
     if mode.startswith("Solarization"):
-        threshold = st.slider("Solarization threshold T  (pixels with I ≥ T are inverted)", 0, 255, 127)
+        threshold = st.slider("Solarization threshold T  (pixels with I ≥ T are inverted)", 0, 255, 170)
         out = ops.solarize(img, threshold)
     else:
         out = ops.negative(img)
@@ -860,7 +868,7 @@ def page_t5() -> None:
     st.title("Color Channel Elimination")
     st.caption("Lab 2 — Pixel & Intensity Operations · Examine the RGB matrix, then zero exactly one channel and observe the result.")
 
-    img, source = image_source("color_cast.png")
+    img, source = image_source(preferred_sample("blue_cast_compass.jpg", "color_cast.png"))
     rgb = ops.bgr_to_rgb(img)
 
     ch_stats = metrics.channel_stats(rgb)
@@ -919,7 +927,10 @@ def page_t5() -> None:
     with st.expander("Sample pixels from the RGB matrix (5×5 around center)"):
         matrix_excerpt_table(rgb, size=5)
 
-    ch_name = st.selectbox("Channel to eliminate (set to 0)", list(CHANNEL_NAMES.values()))
+    ch_name = st.selectbox(
+        "Channel to eliminate (set to 0)", list(CHANNEL_NAMES.values()),
+        index=2 if "blue_cast_compass.jpg" in iu.list_samples() else 0,
+    )
     ch_idx = list(CHANNEL_NAMES.values()).index(ch_name)
     out = ops.eliminate_channel(rgb, ch_idx)
 
@@ -968,7 +979,7 @@ def page_t6() -> None:
     st.title("Histogram Enhancement")
     st.caption("Lab 3 — Histogram Enhancement · Start from a low-contrast image, measure its histogram, pick stretching or equalization.")
 
-    img, source = image_source("low_contrast.png")
+    img, source = image_source(preferred_sample("rock_low_contrast.png", "low_contrast.png"))
     if st.checkbox(
         "Demo helper: compress the current image into a narrow intensity band (105–165) to create a low-contrast input",
     ):
@@ -1101,7 +1112,7 @@ def page_t7() -> None:
     st.title("Noise Reduction & SNR")
     st.caption("Labs 4–5 — Filtering · Inject artificial noise into a clean image, remove it with a suitable filter, measure SNR from scratch.")
 
-    clean, source = image_source("detail_scene.png")
+    clean, source = image_source(preferred_sample("museum_clean.jpg", "detail_scene.png"))
 
     st.markdown(
         '<div class="source-heading">EXPERIMENT SETTINGS</div>',
@@ -1135,7 +1146,8 @@ def page_t7() -> None:
             list(ops.SMOOTHING_FILTERS.keys()),
             index=list(ops.SMOOTHING_FILTERS.keys()).index(recommended),
         )
-        ksize = st.slider("Filter kernel size (odd)", 3, 15, 5, 2)
+        ksize = st.slider("Filter kernel size (odd)", 3, 15,
+                          3 if "museum_clean.jpg" in iu.list_samples() else 5, 2)
     denoised = ops.SMOOTHING_FILTERS[filter_name](noisy, iu.odd_kernel(ksize))
 
     if filter_name != recommended:
@@ -1257,7 +1269,7 @@ def page_t8() -> None:
     st.title("Detail Enhancement (Blur → Sharpening)")
     st.caption("Labs 4–5 — Filtering · Deliberately blur a clean image, then sharpen it and see what comes back.")
 
-    clean, source = image_source("detail_scene.png")
+    clean, source = image_source(preferred_sample("museum_clean.jpg", "detail_scene.png"))
 
     c1, c2 = st.columns(2)
     with c1:
@@ -1266,6 +1278,7 @@ def page_t8() -> None:
         method = st.radio(
             "Sharpening technique",
             ["Laplacian-based sharpening", "Custom 3×3 sharpening kernel", "Unsharp masking"],
+            index=1 if "museum_clean.jpg" in iu.list_samples() else 0,
             horizontal=False,
         )
 
@@ -1379,10 +1392,12 @@ def page_t9() -> None:
     st.title("Edge Detection")
     st.caption("Labs 4–5 — Filtering · Choose an operator that reveals the structural boundaries of the image.")
 
-    img, source = image_source("geometric_edges.png")
+    img, source = image_source(preferred_sample("blue_cast_compass.jpg", "geometric_edges.png"))
     gray = iu.to_gray(img)
 
-    method = st.radio("Edge operator", ["Sobel", "Canny", "Laplacian"], horizontal=True)
+    method = st.radio("Edge operator", ["Sobel", "Canny", "Laplacian"],
+                      index=1 if "blue_cast_compass.jpg" in iu.list_samples() else 0,
+                      horizontal=True)
 
     params = {}
     if method == "Sobel":

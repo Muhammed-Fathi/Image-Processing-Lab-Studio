@@ -1,0 +1,71 @@
+{
+  "sources": {
+    "poppies": {
+      "filename": "poppies_rgb_grayscale.jpg",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Red_poppies_under_morning_sun_(Unsplash).jpg",
+      "size": [
+        1280,
+        771
+      ],
+      "sha256": "e3d7b7af27d3cad1d3e19bb46bd3945b946eb009c3fa9a0daaf41697b4931a10"
+    },
+    "floral": {
+      "filename": "dark_floral_tones.jpg",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Dark_Floral_Tones_(Unsplash).jpg",
+      "size": [
+        960,
+        1321
+      ],
+      "sha256": "3140b61eb4e721a9b52c515fee6f73664c9ce18b716229bbcb735216737106eb"
+    },
+    "sunset": {
+      "filename": "sunset_solarization.jpg",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Tree_silhouette_sunset._(Unsplash).jpg",
+      "size": [
+        1280,
+        853
+      ],
+      "sha256": "7c36864ede8f3f142a210e22aade2a03a11ad50378492bf9afa302db43067e80"
+    },
+    "compass": {
+      "filename": "blue_cast_compass.jpg",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Blue_color_cast_-_Compass_1.jpg",
+      "size": [
+        960,
+        1280
+      ],
+      "sha256": "08ed6ce60c1f4bf528db045f5ad957a4ddf2c9195bdbc2e79cb600e750e18c27"
+    },
+    "rock": {
+      "filename": "rock_original.jpg",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Rock_1,_Elizabeth_Castle,_Jersey.jpg",
+      "size": [
+        1280,
+        803
+      ],
+      "sha256": "3f91f5b8011772fa2d0f2f2994530d3b0acd3c5fde1eb7a16743244a9027ea59"
+    },
+    "museum": {
+      "filename": "museum_clean.jpg",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Colorful_\"Museum”_sign_on_landscape_(Unsplash).jpg",
+      "size": [
+        1280,
+        853
+      ],
+      "sha256": "350963d767e871662446884ea47e836087d8e0e5fa4af3fc4b88bdb807b5c04c"
+    }
+  },
+  "derived": {
+    "task6_low_contrast": {
+      "filename": "rock_low_contrast.png",
+      "parent": "rock_original.jpg",
+      "operation": "src.image_operations.make_low_contrast(image, band=(105, 165))",
+      "sha256": "c481869d38a254a69edbadabd45632bcee69acc642bb52e5a328417e5a39c312",
+      "observed_channel_range": [
+        105,
+        165
+      ],
+      "note": "Synthetic contrast reduction applied to a real photograph; not an unedited photo."
+    }
+  }
+}

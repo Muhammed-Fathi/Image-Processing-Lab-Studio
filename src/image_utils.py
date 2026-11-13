@@ -27,6 +27,14 @@ SAMPLE_INFO: dict[str, str] = {
     "low_contrast.png": "Scene compressed into a narrow intensity band - histogram enhancement demos",
     "detail_scene.png": "Scene with fine line detail - noise / sharpening demos (clean reference)",
     "geometric_edges.png": "High-contrast geometric shapes and text - edge detection demos",
+    # Final photographic examples; installed by scripts/prepare_final_assets.py.
+    "poppies_rgb_grayscale.jpg": "Approved photo for Tasks 1 and 2 - color channels and weighted grayscale (CC0)",
+    "dark_floral_tones.jpg": "Approved underexposed photo for Task 3 - multiplication x1.8 (CC0)",
+    "sunset_solarization.jpg": "Approved sunset photo for Task 4 - solarization T=170 (CC0)",
+    "blue_cast_compass.jpg": "Approved blue cast photo for Tasks 5 and 9 - blue elimination and Canny (CC0)",
+    "rock_original.jpg": "Source rock photograph (CC BY-SA 4.0) used to prepare the Task 6 input",
+    "rock_low_contrast.png": "Synthetic low-contrast adaptation of rock_original.jpg for Task 6 (CC BY-SA 4.0)",
+    "museum_clean.jpg": "Approved clean photo for Tasks 7 and 8 - noise and sharpening (CC0)",
 }
 
 
