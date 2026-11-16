@@ -127,6 +127,86 @@ def test_hsv_red_splash_rejects_invalid_shape_or_dtype():
         ops.hsv_red_color_splash(np.zeros((2, 2, 3), dtype=np.float32))
 
 
+
+@pytest.mark.parametrize("selected_color,expected_mask", [
+    ("red", [255, 0, 0, 0]),
+    ("green", [0, 255, 0, 0]),
+    ("blue", [0, 0, 255, 0]),
+])
+def test_hsv_color_splash_selects_each_primary_color(selected_color, expected_mask):
+    """Red, green, blue each get their own HSV mask, not RGB channel zeroing."""
+    import cv2
+
+    bgr = np.array([[
+        [30, 50, 230],    # red-colored but retains some green and blue
+        [0, 255, 0],      # green
+        [255, 0, 0],      # blue
+        [255, 255, 255],  # white, not any saturated color
+    ]], dtype=np.uint8)
+    original = bgr.copy()
+    mask, output = ops.hsv_color_splash(bgr, selected_color)
+    assert mask.tolist() == [expected_mask]
+    assert np.array_equal(bgr, original)
+
+    gray_bgr = cv2.cvtColor(cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY),
+                            cv2.COLOR_GRAY2BGR)
+    for col, marked in enumerate(expected_mask):
+        assert np.array_equal(
+            output[0, col],
+            bgr[0, col] if marked else gray_bgr[0, col],
+        )
+
+
+def test_hsv_green_and_blue_use_their_respective_hue_intervals():
+    import cv2
+
+    hsv = np.array([[
+        [30, 255, 255],  # yellow, not green
+        [60, 255, 255],  # green
+        [90, 255, 255],  # cyan, not green or blue
+        [120, 255, 255], # blue
+        [145, 255, 255], # purple, not blue
+    ]], dtype=np.uint8)
+    bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    mask_green, _ = ops.hsv_color_splash(bgr, "green")
+    mask_blue, _ = ops.hsv_color_splash(bgr, "blue")
+    assert mask_green.tolist() == [[0, 255, 0, 0, 0]]
+    assert mask_blue.tolist() == [[0, 0, 0, 255, 0]]
+
+
+def test_hsv_color_splash_adjustable_saturation_value_for_green_and_blue():
+    import cv2
+
+    hsv = np.array([[
+        [60, 90, 220],   # muted green: excluded with S=100
+        [120, 200, 90],  # dark blue: excluded with V=100
+    ]], dtype=np.uint8)
+    bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+    green_default, _ = ops.hsv_color_splash(bgr, "green")
+    blue_default, _ = ops.hsv_color_splash(bgr, "blue")
+    green_relaxed, _ = ops.hsv_color_splash(bgr, "green", min_saturation=80)
+    blue_relaxed, _ = ops.hsv_color_splash(bgr, "blue", min_value=80)
+    assert green_default.tolist() == [[0, 0]]
+    assert blue_default.tolist() == [[0, 0]]
+    assert green_relaxed.tolist() == [[255, 0]]
+    assert blue_relaxed.tolist() == [[0, 255]]
+
+
+def test_hsv_red_wrapper_still_matches_generalized_function():
+    img = np.array([[[0, 0, 255], [0, 255, 0]]], dtype=np.uint8)
+    old_mask, old_result = ops.hsv_red_color_splash(img, 80, 90)
+    new_mask, new_result = ops.hsv_color_splash(img, "red", 80, 90)
+    assert np.array_equal(old_mask, new_mask)
+    assert np.array_equal(old_result, new_result)
+
+
+@pytest.mark.parametrize("color", ["purple", "", 123, None])
+def test_hsv_color_splash_rejects_unknown_color(color):
+    with pytest.raises(ValueError):
+        ops.hsv_color_splash(one_pixel((1, 2, 3)), color)
+
+
 # ---------------------------------------------------------------------------
 # Task 2 - weighted grayscale
 # ---------------------------------------------------------------------------
