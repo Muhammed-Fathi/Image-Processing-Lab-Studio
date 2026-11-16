@@ -443,8 +443,14 @@ def page_t1() -> None:
             )
 
     st.markdown("### Explore the channels")
-    tab_map, tab_iso, tab_px, tab_mx = st.tabs(
-        ["Intensity maps", "Color isolation", "Pixel inspector", "RGB matrix (5×5)"]
+    tab_map, tab_iso, tab_hsv, tab_px, tab_mx = st.tabs(
+        [
+            "Intensity maps",
+            "Color isolation",
+            "HSV Color Splash",
+            "Pixel inspector",
+            "RGB matrix (5×5)",
+        ]
     )
     with tab_map:
         st.caption(
@@ -509,6 +515,100 @@ def page_t1() -> None:
             matrix_x = st.slider("Matrix center — column", 0, max(0, w - 1), w // 2)
         matrix_excerpt_table(rgb, size=5, center=(matrix_y, matrix_x))
 
+    with tab_hsv:
+        st.markdown("#### HSV Color Segmentation / Color Splash")
+        st.caption(
+            "Choose Red, Green, or Blue to select pixels by HSV color range. "
+            "Selected pixels keep their original color, while the rest become "
+            "grayscale. This is different from isolating an RGB channel."
+        )
+        selected_color = st.radio(
+            "HSV target color",
+            ("Red", "Green", "Blue"),
+            horizontal=True,
+            key="task1_hsv_target_color",
+        )
+        left, right = st.columns(2)
+        with left:
+            min_s = st.slider(
+                "Minimum saturation (HSV S)", 0, 255, 100, 5,
+                key="task1_hsv_min_s",
+            )
+        with right:
+            min_v = st.slider(
+                "Minimum brightness (HSV V)", 0, 255, 100, 5,
+                key="task1_hsv_min_v",
+            )
+
+        color_key = selected_color.lower()
+        hue_ranges = ops.HSV_COLOR_HUE_RANGES[color_key]
+        hue_text = " or ".join(
+            f"{low}-{high}" for low, high in hue_ranges
+        )
+        st.caption(
+            f"{selected_color} hue range (OpenCV H): {hue_text}; "
+            f"min S: {min_s}, min V: {min_v}."
+        )
+        hsv_mask, hsv_splash = ops.hsv_color_splash(
+            img, color=color_key, min_saturation=min_s, min_value=min_v
+        )
+        st.metric(
+            f"Pixels matching {selected_color} HSV thresholds",
+            f"{np.count_nonzero(hsv_mask) / hsv_mask.size:.1%}",
+        )
+
+        mask_col, splash_col = st.columns(2, gap="medium")
+        with mask_col:
+            st.image(
+                hsv_mask, channels="grayscale",
+                caption=f"{selected_color} HSV mask: white = selected, black = excluded",
+            )
+        with splash_col:
+            show_image(
+                hsv_splash,
+                f"{selected_color} color splash: selected colors remain original",
+                order="bgr",
+            )
+
+        dl_mask, dl_splash = st.columns(2)
+        with dl_mask:
+            download_button(
+                hsv_mask,
+                f"task1_{source_basename(source)}_hsv_{color_key}_mask.png",
+                label=f"Download {selected_color} HSV Mask",
+            )
+        with dl_splash:
+            download_button(
+                hsv_splash,
+                f"task1_{source_basename(source)}_hsv_{color_key}_splash.png",
+                label=f"Download {selected_color} HSV Color Splash",
+            )
+
+        with st.expander("HSV method and difference from RGB channel isolation"):
+            st.markdown(
+                "OpenCV 8-bit HSV uses **H = 0-179**, **S = 0-255**, "
+                "**V = 0-255**. The instructional hue ranges are "
+                "**Red: 0-10 and 160-179** (hue wraps around), "
+                "**Green: 35-85**, **Blue: 100-130**. S and V minima are "
+                "adjustable. Dim or desaturated colors may not be selected, "
+                "and some nearby hues may be included."
+            )
+            st.code(
+                "hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)\n"
+                "# Use two inRange masks for Red; one for Green or Blue.\n"
+                "mask = cv2.inRange(hsv, lower_hsv, upper_hsv)\n"
+                "gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)\n"
+                "gray_bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)\n"
+                "result = np.where(mask[..., None] == 255, bgr, gray_bgr)",
+                language="python",
+            )
+            st.markdown(
+                "**RGB isolation:** (R,G,B) -> (R,0,0) for every pixel when "
+                "isolating red. **HSV segmentation:** keeps all original "
+                "channels for pixels matching the chosen color and converts "
+                "the others to grayscale."
+            )
+
     with st.expander("Understanding the result and mathematical operations"):
         st.markdown(
             "**RGB representation:** each pixel contains three channel values "
@@ -531,6 +631,7 @@ def page_t1() -> None:
         "An intensity map uses grayscale brightness to reveal the contribution of one color channel.",
         "A color-isolated image retains exactly one channel while setting the others to zero.",
         "The RGB split is reversible when all three channels are kept; no color information is lost by splitting alone.",
+        "Optional HSV Red Color Splash selects red-colored pixels instead of isolating an RGB channel; it is a separate segmentation demonstration.",
     ])
 
 # ---------------------------------------------------------------------------

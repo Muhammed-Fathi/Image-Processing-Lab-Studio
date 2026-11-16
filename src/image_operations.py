@@ -53,6 +53,71 @@ def isolate_channel(rgb: np.ndarray, channel: int) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
+# Task 1 (optional extension) - HSV color selection and color splash
+# ---------------------------------------------------------------------------
+
+# Hue is 0..179 in 8-bit OpenCV HSV. Red wraps across both ends.
+HSV_COLOR_HUE_RANGES = {
+    "red": ((0, 10), (160, 179)),
+    "green": ((35, 85),),
+    "blue": ((100, 130),),
+}
+
+
+def hsv_color_splash(
+    bgr: np.ndarray,
+    color: str = "red",
+    min_saturation: int = 100,
+    min_value: int = 100,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Select red, green, or blue pixels using HSV and gray out the rest.
+
+    Input/output images use OpenCV BGR order; input may also be 2-D grayscale.
+    The returned mask is 2-D uint8 (255=selected, 0=not selected), and the
+    output keeps the original *three* color channels only at selected pixels.
+    This is color segmentation, not RGB channel isolation.
+
+    Red: H=0..10 or 160..179. Green: H=35..85. Blue: H=100..130.
+    Saturation/value minima are adjustable for dark or muted colors.
+    """
+    if not isinstance(bgr, np.ndarray) or bgr.dtype != np.uint8:
+        raise ValueError("Expected a uint8 NumPy image in OpenCV BGR order.")
+    if bgr.ndim == 2:
+        bgr = cv2.cvtColor(bgr, cv2.COLOR_GRAY2BGR)
+    elif bgr.ndim != 3 or bgr.shape[2] != 3:
+        raise ValueError("Expected an HxWx3 BGR image or an HxW grayscale image.")
+
+    if not isinstance(color, str) or color.lower() not in HSV_COLOR_HUE_RANGES:
+        raise ValueError("HSV color must be 'red', 'green', or 'blue'.")
+    if not (0 <= min_saturation <= 255 and 0 <= min_value <= 255):
+        raise ValueError("HSV saturation and value minima must be from 0 to 255.")
+
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    mask = np.zeros(bgr.shape[:2], dtype=np.uint8)
+    for low_hue, high_hue in HSV_COLOR_HUE_RANGES[color.lower()]:
+        lower = np.array([low_hue, min_saturation, min_value], dtype=np.uint8)
+        upper = np.array([high_hue, 255, 255], dtype=np.uint8)
+        mask = cv2.bitwise_or(mask, cv2.inRange(hsv, lower, upper))
+
+    gray_bgr = cv2.cvtColor(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR
+    )
+    result = np.where(mask[..., None] == 255, bgr, gray_bgr)
+    return mask, result
+
+
+def hsv_red_color_splash(
+    bgr: np.ndarray,
+    min_saturation: int = 100,
+    min_value: int = 100,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Backward-compatible convenience wrapper for red HSV segmentation."""
+    return hsv_color_splash(
+        bgr, "red", min_saturation=min_saturation, min_value=min_value
+    )
+
+
+# ---------------------------------------------------------------------------
 # Task 2 - weighted grayscale conversion
 # ---------------------------------------------------------------------------
 

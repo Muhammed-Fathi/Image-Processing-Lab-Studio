@@ -382,3 +382,65 @@ def test_task5_original_not_rendered_twice():
     )[0]
     assert task5.count('show_image(rgb, "Original (RGB)", order="rgb")') == 1
     assert 'with st.expander("How to interpret channel elimination")' in task5
+
+
+# ---------------------------------------------------------------------------
+# Task 1 extension: HSV segmentation remains separate from RGB isolation
+# ---------------------------------------------------------------------------
+
+def test_task1_hsv_color_splash_ui():
+    """Switch all three HSV target colors and vary the selection thresholds."""
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file(APP_PATH, default_timeout=60)
+    at.session_state["nav"] = dict(app_module().NAV)["t1"]
+    at.run()
+    assert not at.exception
+
+    color_radios = [r for r in at.main.radio if r.label == "HSV target color"]
+    assert len(color_radios) == 1
+    assert color_radios[0].value == "Red"
+    assert any(
+        m.label == "Pixels matching Red HSV thresholds" for m in at.main.metric
+    )
+
+    for color in ("Green", "Blue", "Red"):
+        color_radios[0].set_value(color)
+        at.run()
+        assert not at.exception
+        assert any(
+            m.label == f"Pixels matching {color} HSV thresholds"
+            for m in at.main.metric
+        )
+        color_radios = [
+            r for r in at.main.radio if r.label == "HSV target color"
+        ]
+
+    sliders = {widget.label: widget for widget in at.main.slider}
+    saturation = "Minimum saturation (HSV S)"
+    brightness = "Minimum brightness (HSV V)"
+    assert saturation in sliders
+    assert brightness in sliders
+
+    sliders[saturation].set_value(150)
+    sliders[brightness].set_value(120)
+    at.run()
+    assert not at.exception
+    updated_sliders = {widget.label: widget.value for widget in at.main.slider}
+    assert updated_sliders[saturation] == 150
+    assert updated_sliders[brightness] == 120
+
+
+def test_task1_hsv_is_an_extra_tab_not_a_replacement():
+    """Guard the original RGB channel/isolation code and HSV PNG exports."""
+    source = open(APP_PATH, encoding="utf-8").read()
+    task1 = source.split("def page_t1() -> None:", 1)[1].split(
+        "# Task 2", 1
+    )[0]
+    assert '"Color isolation"' in task1
+    assert '"HSV Color Splash"' in task1
+    assert 'ops.isolate_channel(rgb, index)' in task1
+    assert 'ops.hsv_color_splash(' in task1
+    assert '("Red", "Green", "Blue")' in task1
+    assert 'label=f"Download {selected_color} HSV Mask"' in task1
+    assert 'label=f"Download {selected_color} HSV Color Splash"' in task1

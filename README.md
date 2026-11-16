@@ -384,3 +384,35 @@ After preparation:
 Check the displayed results, especially the SNR and histogram values, because
 resizing or JPEG recompression can change numerical measurements. The images,
 derived file and hash manifest should be committed **only after** this review.
+
+
+## Optional Task 1 extension: HSV Red, Green, and Blue Color Splash
+
+Task 1 preserves the required **RGB Channel Separation** and **RGB Color
+Isolation** demonstrations. The separate **HSV Color Splash** tab demonstrates
+**color-based pixel selection**, which is different from isolating one RGB
+channel.
+
+- Select **Red**, **Green**, or **Blue** using the HSV target color selector.
+- OpenCV 8-bit HSV uses H = 0–179; the initial instructional hue ranges are:
+  **Red = 0–10 or 160–179**, **Green = 35–85**, **Blue = 100–130**.
+  Red needs two ranges because hue wraps around at the end of its scale.
+- Adjust **minimum saturation** (S) and **minimum brightness** (V), initially
+  100 each, to control which pixels qualify. Dark, muted, and nearby colors
+  can be included or excluded depending on these thresholds.
+- A binary mask highlights the pixels whose color matches the chosen HSV
+  range (white = selected); the output preserves the **full original BGR
+  color** of those selected pixels and renders everything else grayscale.
+- View the color-specific mask, the color-splash result, and coverage percentage.
+  Download the two PNGs with names that include red, green, or blue.
+
+**Difference:** RGB red-channel isolation sets (R, G, B) → (R, 0, 0)
+for **every** pixel. HSV red segmentation instead **selects matching pixels**
+and keeps *all* original color components at those pixels. The same principle
+applies independently to green and blue.
+
+Implementation: `src/image_operations.py::hsv_color_splash` with
+`HSV_COLOR_HUE_RANGES`. The original
+`hsv_red_color_splash` API remains as a backward-compatible wrapper.
+Streamlit interaction and color-selection tests are included in
+`tests/test_app.py` and `tests/test_image_operations.py`.
