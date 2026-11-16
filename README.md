@@ -386,26 +386,33 @@ resizing or JPEG recompression can change numerical measurements. The images,
 derived file and hash manifest should be committed **only after** this review.
 
 
-## Optional Task 1 extension: HSV Red Color Splash
+## Optional Task 1 extension: HSV Red, Green, and Blue Color Splash
 
-Task 1 keeps its original **RGB Channel Separation** and **RGB Color Isolation**
-tabs. An extra tab named **HSV Red Color Splash** demonstrates a different
-concept: selecting pixels by their color instead of retaining a single channel.
+Task 1 preserves the required **RGB Channel Separation** and **RGB Color
+Isolation** demonstrations. The separate **HSV Color Splash** tab demonstrates
+**color-based pixel selection**, which is different from isolating one RGB
+channel.
 
-- The input image is converted from OpenCV BGR to HSV.
-- Red is detected in two hue ranges (OpenCV H = **0–10** or **160–179**) because
-  red wraps around the hue scale. The S and V minima are adjustable, initially 100.
-- A binary **mask** marks matching red pixels with 255, and everything else with 0.
-- The **Color Splash** output preserves each selected pixel's *original full
-  color* (all BGR channels), while the remaining pixels become grayscale.
-- The interface shows the red-mask coverage percentage, the mask, the color
-  splash image, and separate PNG download buttons.
+- Select **Red**, **Green**, or **Blue** using the HSV target color selector.
+- OpenCV 8-bit HSV uses H = 0–179; the initial instructional hue ranges are:
+  **Red = 0–10 or 160–179**, **Green = 35–85**, **Blue = 100–130**.
+  Red needs two ranges because hue wraps around at the end of its scale.
+- Adjust **minimum saturation** (S) and **minimum brightness** (V), initially
+  100 each, to control which pixels qualify. Dark, muted, and nearby colors
+  can be included or excluded depending on these thresholds.
+- A binary mask highlights the pixels whose color matches the chosen HSV
+  range (white = selected); the output preserves the **full original BGR
+  color** of those selected pixels and renders everything else grayscale.
+- View the color-specific mask, the color-splash result, and coverage percentage.
+  Download the two PNGs with names that include red, green, or blue.
 
-**Difference:** RGB channel isolation changes every pixel from (R, G, B)
-to (R, 0, 0) when isolating Red. HSV red segmentation instead *selects
-certain pixels* and preserves their original colors. This optional extension
-does not replace the university-required RGB separation.
+**Difference:** RGB red-channel isolation sets (R, G, B) → (R, 0, 0)
+for **every** pixel. HSV red segmentation instead **selects matching pixels**
+and keeps *all* original color components at those pixels. The same principle
+applies independently to green and blue.
 
-Implementation: \`src/image_operations.py::hsv_red_color_splash\`. The function
-uses OpenCV and NumPy and does not modify the original image. Its behavior
-and the Streamlit controls are covered by regression tests.
+Implementation: `src/image_operations.py::hsv_color_splash` with
+`HSV_COLOR_HUE_RANGES`. The original
+`hsv_red_color_splash` API remains as a backward-compatible wrapper.
+Streamlit interaction and color-selection tests are included in
+`tests/test_app.py` and `tests/test_image_operations.py`.
