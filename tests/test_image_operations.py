@@ -47,6 +47,86 @@ def test_isolate_channel_keeps_only_one_channel():
         assert iso[0, 0].tolist() == expected
 
 
+
+# ---------------------------------------------------------------------------
+# Task 1 extension - HSV red color segmentation / color splash
+# ---------------------------------------------------------------------------
+
+def test_hsv_red_splash_preserves_matching_bgr_and_grays_other_pixels():
+    import cv2
+
+    bgr = np.array([[
+        [20, 40, 230],     # saturated red: keep all three original BGR components
+        [255, 0, 0],       # blue: convert to grayscale
+        [0, 255, 0],       # green: convert to grayscale
+        [255, 255, 255],   # white (S=0): do not select
+    ]], dtype=np.uint8)
+    original = bgr.copy()
+    mask, splash = ops.hsv_red_color_splash(bgr)
+
+    assert mask.dtype == np.uint8
+    assert splash.dtype == np.uint8
+    assert mask.shape == bgr.shape[:2]
+    assert splash.shape == bgr.shape
+    assert mask.tolist() == [[255, 0, 0, 0]]
+    assert np.array_equal(splash[0, 0], bgr[0, 0])
+
+    expected_gray = cv2.cvtColor(
+        cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR
+    )
+    assert np.array_equal(splash[:, 1:], expected_gray[:, 1:])
+    assert np.array_equal(bgr, original)  # processing must not mutate input
+
+
+def test_hsv_red_splash_uses_both_red_hue_ranges_and_adjustable_sv():
+    import cv2
+
+    hsv = np.array([[
+        [5, 200, 220],     # low red hue range
+        [175, 200, 220],   # high red hue range (wrap-around)
+        [60, 200, 220],    # non-red
+        [5, 90, 220],      # muted red (excluded by S=100)
+        [175, 200, 90],    # dark red (excluded by V=100)
+    ]], dtype=np.uint8)
+    bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+    default_mask, _ = ops.hsv_red_color_splash(bgr)
+    assert default_mask.tolist() == [[255, 255, 0, 0, 0]]
+
+    relaxed_mask, _ = ops.hsv_red_color_splash(
+        bgr, min_saturation=80, min_value=80
+    )
+    assert relaxed_mask.tolist() == [[255, 255, 0, 255, 255]]
+
+
+def test_hsv_red_splash_accepts_grayscale_without_mistaking_it_for_red():
+    gray = np.array([[20, 120, 230]], dtype=np.uint8)
+    mask, splash = ops.hsv_red_color_splash(gray)
+    assert not mask.any()
+    assert splash.shape == (1, 3, 3)
+    assert np.array_equal(splash[:, :, 0], gray)
+    assert np.array_equal(splash[:, :, 1], gray)
+    assert np.array_equal(splash[:, :, 2], gray)
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"min_saturation": -1},
+    {"min_saturation": 256},
+    {"min_value": -1},
+    {"min_value": 256},
+])
+def test_hsv_red_splash_rejects_invalid_sv_limits(kwargs):
+    with pytest.raises(ValueError):
+        ops.hsv_red_color_splash(one_pixel((0, 0, 255)), **kwargs)
+
+
+def test_hsv_red_splash_rejects_invalid_shape_or_dtype():
+    with pytest.raises(ValueError):
+        ops.hsv_red_color_splash(np.zeros((2, 2, 4), dtype=np.uint8))
+    with pytest.raises(ValueError):
+        ops.hsv_red_color_splash(np.zeros((2, 2, 3), dtype=np.float32))
+
+
 # ---------------------------------------------------------------------------
 # Task 2 - weighted grayscale
 # ---------------------------------------------------------------------------
