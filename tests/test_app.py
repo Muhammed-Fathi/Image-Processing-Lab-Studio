@@ -389,7 +389,7 @@ def test_task5_original_not_rendered_twice():
 # ---------------------------------------------------------------------------
 
 def test_task1_hsv_color_splash_ui():
-    """Streamlit renders the optional HSV panel and accepts slider changes."""
+    """Switch all three HSV target colors and vary the selection thresholds."""
     from streamlit.testing.v1 import AppTest
 
     at = AppTest.from_file(APP_PATH, default_timeout=60)
@@ -397,14 +397,30 @@ def test_task1_hsv_color_splash_ui():
     at.run()
     assert not at.exception
 
+    color_radios = [r for r in at.main.radio if r.label == "HSV target color"]
+    assert len(color_radios) == 1
+    assert color_radios[0].value == "Red"
+    assert any(
+        m.label == "Pixels matching Red HSV thresholds" for m in at.main.metric
+    )
+
+    for color in ("Green", "Blue", "Red"):
+        color_radios[0].set_value(color)
+        at.run()
+        assert not at.exception
+        assert any(
+            m.label == f"Pixels matching {color} HSV thresholds"
+            for m in at.main.metric
+        )
+        color_radios = [
+            r for r in at.main.radio if r.label == "HSV target color"
+        ]
+
     sliders = {widget.label: widget for widget in at.main.slider}
     saturation = "Minimum saturation (HSV S)"
     brightness = "Minimum brightness (HSV V)"
     assert saturation in sliders
     assert brightness in sliders
-    assert any(
-        m.label == "Pixels matching the red HSV ranges" for m in at.main.metric
-    )
 
     sliders[saturation].set_value(150)
     sliders[brightness].set_value(120)
@@ -422,8 +438,9 @@ def test_task1_hsv_is_an_extra_tab_not_a_replacement():
         "# Task 2", 1
     )[0]
     assert '"Color isolation"' in task1
-    assert '"HSV Red Color Splash"' in task1
+    assert '"HSV Color Splash"' in task1
     assert 'ops.isolate_channel(rgb, index)' in task1
-    assert 'ops.hsv_red_color_splash(' in task1
-    assert 'label="Download HSV Red Mask"' in task1
-    assert 'label="Download HSV Color Splash"' in task1
+    assert 'ops.hsv_color_splash(' in task1
+    assert '("Red", "Green", "Blue")' in task1
+    assert 'label=f"Download {selected_color} HSV Mask"' in task1
+    assert 'label=f"Download {selected_color} HSV Color Splash"' in task1
