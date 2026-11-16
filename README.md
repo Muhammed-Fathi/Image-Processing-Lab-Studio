@@ -384,3 +384,28 @@ After preparation:
 Check the displayed results, especially the SNR and histogram values, because
 resizing or JPEG recompression can change numerical measurements. The images,
 derived file and hash manifest should be committed **only after** this review.
+
+
+## Optional Task 1 extension: HSV Red Color Splash
+
+Task 1 keeps its original **RGB Channel Separation** and **RGB Color Isolation**
+tabs. An extra tab named **HSV Red Color Splash** demonstrates a different
+concept: selecting pixels by their color instead of retaining a single channel.
+
+- The input image is converted from OpenCV BGR to HSV.
+- Red is detected in two hue ranges (OpenCV H = **0–10** or **160–179**) because
+  red wraps around the hue scale. The S and V minima are adjustable, initially 100.
+- A binary **mask** marks matching red pixels with 255, and everything else with 0.
+- The **Color Splash** output preserves each selected pixel's *original full
+  color* (all BGR channels), while the remaining pixels become grayscale.
+- The interface shows the red-mask coverage percentage, the mask, the color
+  splash image, and separate PNG download buttons.
+
+**Difference:** RGB channel isolation changes every pixel from (R, G, B)
+to (R, 0, 0) when isolating Red. HSV red segmentation instead *selects
+certain pixels* and preserves their original colors. This optional extension
+does not replace the university-required RGB separation.
+
+Implementation: \`src/image_operations.py::hsv_red_color_splash\`. The function
+uses OpenCV and NumPy and does not modify the original image. Its behavior
+and the Streamlit controls are covered by regression tests.
