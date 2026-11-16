@@ -53,6 +53,53 @@ def isolate_channel(rgb: np.ndarray, channel: int) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
+# Task 1 (optional extension) - HSV red selection and color splash
+# ---------------------------------------------------------------------------
+
+def hsv_red_color_splash(
+    bgr: np.ndarray,
+    min_saturation: int = 100,
+    min_value: int = 100,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Select red-colored pixels in HSV and grayscale everything else.
+
+    Input is OpenCV BGR uint8 (or 2-D grayscale, converted to BGR).
+    Return (binary mask, BGR color-splash image). A mask value of 255 means
+    that the pixel belongs to one of OpenCV's two red hue ranges:
+    H in [0, 10] or [160, 179], S >= min_saturation, V >= min_value.
+
+    Unlike RGB channel isolation, matching pixels retain *all three*
+    original color components. Other pixels become a 3-channel grayscale
+    representation. The source image is never mutated.
+    """
+    if not isinstance(bgr, np.ndarray) or bgr.dtype != np.uint8:
+        raise ValueError("Expected a uint8 NumPy image in OpenCV BGR order.")
+    if bgr.ndim == 2:
+        bgr = cv2.cvtColor(bgr, cv2.COLOR_GRAY2BGR)
+    elif bgr.ndim != 3 or bgr.shape[2] != 3:
+        raise ValueError("Expected an HxWx3 BGR image or an HxW grayscale image.")
+
+    if not (0 <= min_saturation <= 255 and 0 <= min_value <= 255):
+        raise ValueError("HSV saturation and value minima must be from 0 to 255.")
+
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    lower_red_1 = np.array([0, min_saturation, min_value], dtype=np.uint8)
+    upper_red_1 = np.array([10, 255, 255], dtype=np.uint8)
+    lower_red_2 = np.array([160, min_saturation, min_value], dtype=np.uint8)
+    upper_red_2 = np.array([179, 255, 255], dtype=np.uint8)
+
+    red_mask = cv2.bitwise_or(
+        cv2.inRange(hsv, lower_red_1, upper_red_1),
+        cv2.inRange(hsv, lower_red_2, upper_red_2),
+    )
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+    gray_bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    color_splash = np.where(red_mask[..., None] == 255, bgr, gray_bgr)
+    return red_mask, color_splash
+
+
+
+# ---------------------------------------------------------------------------
 # Task 2 - weighted grayscale conversion
 # ---------------------------------------------------------------------------
 
